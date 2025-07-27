@@ -3,6 +3,12 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   Send, 
   Mic, 
@@ -55,22 +61,9 @@ export function Mindspace() {
   ]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedSME, setSelectedSME] = useState({
-    name: 'Dr. Equation',
-    subject: 'Mathematics',
-    avatar: 'DE',
-    icon: Calculator
-  });
   const [sessionTime, setSessionTime] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const smeOptions = [
-    { name: 'Dr. Equation', subject: 'Mathematics', avatar: 'DE', icon: Calculator },
-    { name: 'Prof. Atom', subject: 'Physics & Chemistry', avatar: 'PA', icon: Atom },
-    { name: 'Code Master', subject: 'Programming', avatar: 'CM', icon: Code },
-    { name: 'Prof. Wordsmith', subject: 'Literature', avatar: 'PW', icon: BookOpen }
-  ];
 
   const suggestionChips = [
     "Explain quadratic equations",
@@ -100,7 +93,12 @@ export function Mindspace() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleSendMessage = () => {
+import { generateResponse } from '@/lib/ai';
+import { smes, SMEKey } from '@/lib/sme';
+
+  const [selectedSMEKey, setSelectedSMEKey] = useState<SMEKey>('math');
+
+  const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
 
     const userMessage: Message = {
@@ -114,25 +112,32 @@ export function Mindspace() {
     setCurrentMessage('');
     setIsTyping(true);
 
-    // Simulate SME response
-    setTimeout(() => {
-      const smeResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'sme',
-        content: generateSMEResponse(currentMessage),
-        timestamp: new Date(),
-        sme: selectedSME
-      };
-      setMessages(prev => [...prev, smeResponse]);
-      setIsTyping(false);
-    }, 1500);
-  };
+    const sme = smes[selectedSMEKey];
 
-  const generateSMEResponse = (userMessage: string): string => {
-    if (userMessage.toLowerCase().includes('quadratic')) {
-      return "A quadratic equation is a polynomial equation of degree 2, typically written as ax² + bx + c = 0. The solutions can be found using the quadratic formula: x = (-b ± √(b² - 4ac)) / 2a. Would you like me to walk through a specific example?";
-    }
-    return `Great question! Let me help you understand that concept better. ${selectedSME.subject} is a fascinating field with many interconnected ideas. What specific aspect would you like to explore further?`;
+    const history = messages.map(msg => ({
+      role: msg.type,
+      content: msg.content,
+    }));
+
+    const response = await generateResponse(
+      currentMessage,
+      history,
+      sme.prompt
+    );
+
+    const smeResponse: Message = {
+      id: (Date.now() + 1).toString(),
+      type: 'sme',
+      content: response as string,
+      timestamp: new Date(),
+      sme: {
+        name: sme.name,
+        subject: sme.systemContext,
+        avatar: sme.name.substring(0, 2).toUpperCase()
+      },
+    };
+    setMessages(prev => [...prev, smeResponse]);
+    setIsTyping(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -156,22 +161,38 @@ export function Mindspace() {
             <div className="flex items-center space-x-4">
               {/* SME Selector */}
               <div className="flex items-center space-x-3">
-                <Avatar className="w-10 h-10">
-                  <AvatarFallback className="bg-gradient-to-br from-mindly-primary to-mindly-accent text-white font-semibold">
-                    {selectedSME.avatar}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <h2 className="font-semibold text-gray-900 dark:text-white">
-                      {selectedSME.name}
-                    </h2>
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {selectedSME.subject}
-                  </p>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="flex items-center space-x-3 cursor-pointer">
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className="bg-gradient-to-br from-mindly-primary to-mindly-accent text-white font-semibold">
+                          {smes[selectedSMEKey].name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h2 className="font-semibold text-gray-900 dark:text-white">
+                            {smes[selectedSMEKey].name}
+                          </h2>
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {smes[selectedSMEKey].systemContext.split(',')[0]}
+                        </p>
+                      </div>
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {Object.keys(smes).map((key) => (
+                      <DropdownMenuItem
+                        key={key}
+                        onClick={() => setSelectedSMEKey(key as SMEKey)}
+                      >
+                        {smes[key as SMEKey].name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Breadcrumbs */}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,51 +16,64 @@ import {
   ArrowRight,
   Plus
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/AuthWrapper';
 
 export function Launchpad() {
+  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState('quick-start');
+  const [profile, setProfile] = useState<any>(null);
+  const [learningPaths, setLearningPaths] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
-  const quickStartOptions = [
-    {
-      title: 'Math Mastery',
-      description: 'Start with fundamental algebra and work your way up to calculus',
-      duration: '4 weeks',
-      difficulty: 'Beginner',
-      icon: Target,
-      color: 'from-blue-500 to-indigo-600',
-      progress: 0
-    },
-    {
-      title: 'Science Explorer',
-      description: 'Discover physics, chemistry, and biology concepts',
-      duration: '6 weeks',
-      difficulty: 'Intermediate',
-      icon: Star,
-      color: 'from-purple-500 to-pink-600',
-      progress: 25
-    },
-    {
-      title: 'Code Academy',
-      description: 'Learn programming from scratch with hands-on projects',
-      duration: '8 weeks',
-      difficulty: 'Beginner',
-      icon: Play,
-      color: 'from-green-500 to-emerald-600',
-      progress: 0
-    }
-  ];
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (session) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        if (error) {
+          console.error('Error fetching profile:', error);
+        } else {
+          setProfile(data);
+        }
+      }
+    };
 
-  const recentActivity = [
-    { subject: 'Mathematics', lesson: 'Quadratic Equations', time: '2 hours ago', progress: 85 },
-    { subject: 'Physics', lesson: 'Newton\'s Laws', time: '1 day ago', progress: 92 },
-    { subject: 'Programming', lesson: 'React Components', time: '2 days ago', progress: 78 }
-  ];
+    const fetchLearningPaths = async () => {
+      const { data, error } = await supabase
+        .from('learning_paths')
+        .select('*')
+        .limit(3);
+      if (error) {
+        console.error('Error fetching learning paths:', error);
+      } else {
+        setLearningPaths(data);
+      }
+    };
 
-  const upcomingDeadlines = [
-    { title: 'Math Quiz: Derivatives', date: 'Tomorrow', priority: 'high' },
-    { title: 'Physics Lab Report', date: 'In 3 days', priority: 'medium' },
-    { title: 'Code Review Session', date: 'Next week', priority: 'low' }
-  ];
+    const fetchRecentActivity = async () => {
+      if (session) {
+        const { data, error } = await supabase
+          .from('user_progress')
+          .select('*, learning_paths(*)')
+          .eq('user_id', session.user.id)
+          .order('last_accessed', { ascending: false })
+          .limit(3);
+        if (error) {
+          console.error('Error fetching recent activity:', error);
+        } else {
+          setRecentActivity(data);
+        }
+      }
+    };
+
+    fetchProfile();
+    fetchLearningPaths();
+    fetchRecentActivity();
+  }, [session]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 transition-colors duration-300">
@@ -70,7 +83,7 @@ export function Launchpad() {
           <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 dark:border-blue-400/30 mb-6 backdrop-blur-sm">
             <Rocket className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
             <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              Launch Your Learning Journey
+              Welcome back, {profile?.username || 'learner'}!
             </span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-white dark:via-blue-400 dark:to-purple-400">
@@ -114,38 +127,32 @@ export function Launchpad() {
                 Start Learning Today
               </h2>
               <div className="grid gap-6 md:grid-cols-2">
-                {quickStartOptions.map((option, index) => (
+                {learningPaths.map((path, index) => (
                   <Card key={index} className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-0 overflow-hidden">
-                    <div className={`h-4 bg-gradient-to-r ${option.color}`}></div>
+                    <div className={`h-4 bg-gradient-to-r from-blue-500 to-indigo-600`}></div>
                     <div className="p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <div className={`w-12 h-12 bg-gradient-to-r ${option.color} rounded-xl flex items-center justify-center`}>
-                          <option.icon className="w-6 h-6 text-white" />
+                        <div className={`w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center`}>
+                          <BookOpen className="w-6 h-6 text-white" />
                         </div>
                         <Badge variant="secondary" className="text-xs">
-                          {option.difficulty}
+                          {path.difficulty_level}
                         </Badge>
                       </div>
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                        {option.title}
+                        {path.title}
                       </h3>
                       <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-                        {option.description}
+                        {path.description}
                       </p>
                       <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
                         <div className="flex items-center">
                           <Clock className="w-4 h-4 mr-1" />
-                          {option.duration}
+                          {path.estimated_hours} hours
                         </div>
-                        {option.progress > 0 && (
-                          <span>{option.progress}% complete</span>
-                        )}
                       </div>
-                      {option.progress > 0 && (
-                        <Progress value={option.progress} className="mb-4" />
-                      )}
-                      <Button className={`w-full bg-gradient-to-r ${option.color} hover:shadow-lg transition-all duration-200`}>
-                        {option.progress > 0 ? 'Continue Learning' : 'Start Course'}
+                      <Button className={`w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:shadow-lg transition-all duration-200`}>
+                        {'Start Course'}
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </div>
@@ -170,41 +177,13 @@ export function Launchpad() {
                       </div>
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-                          {activity.lesson}
+                          {activity.learning_paths.title}
                         </h4>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {activity.subject} • {activity.time}
+                          {activity.learning_paths.subject}
                         </p>
-                        <Progress value={activity.progress} className="mt-1 h-1" />
+                        <Progress value={activity.progress_percentage} className="mt-1 h-1" />
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Upcoming Deadlines */}
-              <Card className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <Calendar className="w-5 h-5 mr-2 text-mindly-accent" />
-                  Upcoming Deadlines
-                </h3>
-                <div className="space-y-3">
-                  {upcomingDeadlines.map((deadline, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-                          {deadline.title}
-                        </h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {deadline.date}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant={deadline.priority === 'high' ? 'destructive' : deadline.priority === 'medium' ? 'default' : 'secondary'}
-                        className="text-xs"
-                      >
-                        {deadline.priority}
-                      </Badge>
                     </div>
                   ))}
                 </div>

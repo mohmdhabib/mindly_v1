@@ -53,14 +53,16 @@ interface Message {
 const initialMessage: Message = {
     id: '1',
     type: 'sme',
-    content: "Hello! I'm Professor Newton, your Mathematics SME. I'm here to help you understand any math concept, from basic arithmetic to advanced calculus. What would you like to learn today?",
+    content: "learn any topic in depth with Mindly Academy's expert SMEs.",
     timestamp: new Date(Date.now() - 300000),
     sme: {
-      name: 'Professor Newton',
-      subject: 'Mathematics',
-      avatar: 'PN'
+      name: 'MINDLY',
+      subject: 'Mindly Academy',
+      avatar: 'MY'
     }
   };
+
+  
 
 export function Mindspace() {
   const [messages, setMessages] = useState<Message[]>([initialMessage]);
@@ -73,12 +75,7 @@ export function Mindspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const suggestionChips = [
-    "Explain quadratic equations",
-    "Help with calculus derivatives",
-    "Solve this math problem",
-    "What is integration?"
-  ];
+  const suggestionChips = smes[selectedSMEKey].suggestions;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -197,11 +194,11 @@ export function Mindspace() {
   };
 
   return (
-    <div className="min-h-screen bg-mindly-bg dark:bg-gray-900 flex">
+    <div className="min-h-screen flex">
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/20 dark:border-gray-700/20 p-4">
+        <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/20 dark:border-gray-700/20 p-4 pt-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {/* SME Selector */}
@@ -373,7 +370,7 @@ export function Mindspace() {
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200/20 dark:border-gray-700/20 p-4">
           {/* Suggestion Chips */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {suggestionChips.map((suggestion, index) => (
+            {smes[selectedSMEKey].suggestions.map((suggestion, index) => (
               <Button
                 key={index}
                 variant="outline"
@@ -433,8 +430,8 @@ export function Mindspace() {
 
       {/* Sidebar */}
       <div className="w-80 bg-white/50 dark:bg-gray-900/50 backdrop-blur-lg border-l border-gray-200/20 dark:border-gray-700/20 p-4 hidden lg:block">
-        <div className="space-y-6">
-          {/* Conversation History */}
+        <div className="sticky top-0 max-h-screen overflow-y-auto">
+          {/* Recent Conversations */}
           <div>
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-semibold text-gray-900 dark:text-white">Recent Conversations</h3>
@@ -444,7 +441,11 @@ export function Mindspace() {
               {conversations.map((convo) => (
                 <div
                   key={convo.id}
-                  className="p-3 rounded-lg bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                    currentConversationId === convo.id
+                      ? 'bg-mindly-primary/20 dark:bg-mindly-primary/30'
+                      : 'bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800'
+                  }`}
                   onClick={() => handleSelectConversation(convo.id)}
                 >
                   <div className="font-medium text-sm text-gray-900 dark:text-white">{convo.title}</div>

@@ -26,6 +26,13 @@ import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 import { generateResponse } from '@/lib/ai';
 import { smes, SMEKey } from '@/lib/sme';
+import { supabase } from '@/lib/supabase';
+
+interface Conversation {
+  id: string;
+  title: string;
+  updated_at: string;
+}
 
 interface Message {
   id: string;
@@ -61,6 +68,8 @@ export function Mindspace() {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedSMEKey, setSelectedSMEKey] = useState<SMEKey>('math');
   const [sessionTime, setSessionTime] = useState(0);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -75,8 +84,22 @@ export function Mindspace() {
     const timer = setInterval(() => {
       setSessionTime(prev => prev + 1);
     }, 1000);
+    fetchConversations();
     return () => clearInterval(timer);
   }, []);
+
+  const fetchConversations = async () => {
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('id, title, updated_at')
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching conversations:', error);
+    } else {
+      setConversations(data);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -132,6 +155,51 @@ export function Mindspace() {
     };
     setMessages(prev => [...prev, smeResponse]);
     setIsTyping(false);
+
+    // Store conversation
+    const updatedMessages = [...messages, userMessage, smeResponse];
+    if (currentConversationId) {
+      await supabase
+        .from('conversations')
+        .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
+        .eq('id', currentConversationId);
+    } else {
+      const { data } = await supabase
+        .from('conversations')
+        .insert({
+          sme_type: selectedSMEKey,
+          title: currentMessage.substring(0, 20),
+          messages: updatedMessages,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+        })
+        .select('id')
+        .single();
+      if (data) {
+        setCurrentConversationId(data.id);
+      }
+    }
+    fetchConversations();
+  };
+
+  const handleSelectConversation = async (conversationId: string) => {
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('messages, sme_type')
+      .eq('id', conversationId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching conversation:', error);
+    } else {
+      // The 'messages' property is of type `Json | null`.
+      // We need to assert its type to `Message[]` after checking for null.
+      const loadedMessages = data.messages as unknown as Message[];
+      if (loadedMessages) {
+        setMessages(loadedMessages);
+      }
+      setSelectedSMEKey(data.sme_type as SMEKey);
+      setCurrentConversationId(conversationId);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -387,10 +455,16 @@ export function Mindspace() {
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Recent Conversations</h3>
             <div className="space-y-2">
-              {['Quadratic Equations', 'Calculus Basics', 'Linear Algebra'].map((topic, index) => (
-                <div key={index} className="p-3 rounded-lg bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-colors">
-                  <div className="font-medium text-sm text-gray-900 dark:text-white">{topic}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</div>
+              {conversations.map((convo) => (
+                <div
+                  key={convo.id}
+                  className="p-3 rounded-lg bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                  onClick={() => handleSelectConversation(convo.id)}
+                >
+                  <div className="font-medium text-sm text-gray-900 dark:text-white">{convo.title}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(convo.updated_at).toLocaleTimeString()}
+                  </div>
                 </div>
               ))}
             </div>

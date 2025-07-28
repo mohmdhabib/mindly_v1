@@ -120,9 +120,7 @@ export function Mindspace() {
 
     const sme = smes[selectedSMEKey];
 
-    const N = 10; // or whatever fits your model's context window
-    const recentMessages = messages.slice(-N);
-    const history = recentMessages.map(msg => ({
+    const history = messages.map(msg => ({
       role: msg.type,
       content: msg.content,
     }));
@@ -200,7 +198,7 @@ export function Mindspace() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/20 dark:border-gray-700/20 p-4 pt-10">
+        <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/20 dark:border-gray-700/20 p-4 pt-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {/* SME Selector */}
@@ -265,7 +263,7 @@ export function Mindspace() {
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message) => (
             <div
               key={message.id}

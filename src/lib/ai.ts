@@ -9,12 +9,17 @@ const model = new ChatGoogleGenerativeAI({
 export const generateResponse = async (
   prompt: string,
   history: any[],
-  systemContext: string
+  systemContext: string,
+  uploadedFiles: any[]
 ) => {
-  const chatPrompt = `${systemContext}\n\n${history
-    .map((h) => `${h.role}: ${h.content}`)
-    .join('\n')}\n\nuser: ${prompt}`
+  const fileContent = uploadedFiles
+    .map((file) => `File: ${file.path}\n\n${file.content}`)
+    .join('\n\n');
 
-  const response = await model.invoke(chatPrompt)
-  return response.content
-}
+  const chatPrompt = `${systemContext}\n\n${fileContent}\n\n${history
+    .map((h) => `${h.role}: ${h.content}`)
+    .join('\n')}\n\nuser: ${prompt}`;
+
+  const response = await model.invoke(chatPrompt);
+  return response.content;
+};

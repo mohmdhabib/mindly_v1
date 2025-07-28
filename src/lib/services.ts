@@ -43,15 +43,15 @@ export const getPosts = async () => {
   return Promise.resolve(mockPosts);
 };
 
-export const votePost = async (postId, type) => {
-  // const { data, error } = await supabase
-  //   .from("posts")
-  //   .update({ upvotes: upvotes + (type === "up" ? 1 : -1) })
-  //   .eq("id", postId);
-  // if (error) throw error;
-  // return data;
-  return Promise.resolve();
-};
+// export const votePost = async (postId, type) => {
+//   // const { data, error } = await supabase
+//   //   .from("posts")
+//   //   .update({ upvotes: upvotes + (type === "up" ? 1 : -1) })
+//   //   .eq("id", postId);
+//   // if (error) throw error;
+//   // return data;
+//   return Promise.resolve();
+// };
 
 // LEADERBOARD
 export const getLeaderboard = async () => {

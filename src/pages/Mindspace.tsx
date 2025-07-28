@@ -26,6 +26,7 @@ import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 import { generateResponse } from '@/lib/ai';
 import { smes, SMEKey } from '@/lib/sme';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   id: string;
@@ -61,8 +62,43 @@ export function Mindspace() {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedSMEKey, setSelectedSMEKey] = useState<SMEKey>('math');
   const [sessionTime, setSessionTime] = useState(0);
+  const [recentConversations, setRecentConversations] = useState<any[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const { data, error } = await supabase.storage
+      .from('learning-resources')
+      .upload(`public/${file.name}`, file);
+
+    if (error) {
+      console.error('Error uploading file:', error);
+    } else {
+      setUploadedFiles([...uploadedFiles, data]);
+    }
+  };
+
+  useEffect(() => {
+    const fetchRecentConversations = async () => {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching recent conversations:', error);
+      } else {
+        setRecentConversations(data);
+      }
+    };
+
+    fetchRecentConversations();
+  }, []);
 
   const suggestionChips = [
     "Explain quadratic equations",
@@ -113,10 +149,27 @@ export function Mindspace() {
       content: msg.content,
     }));
 
+    const fileContents = await Promise.all(
+      uploadedFiles.map(async (file) => {
+        const { data, error } = await supabase.storage
+          .from('learning-resources')
+          .download(file.path);
+        if (error) {
+          console.error('Error downloading file:', error);
+          return null;
+        }
+        return {
+          path: file.path,
+          content: await data.text(),
+        };
+      })
+    );
+
     const response = await generateResponse(
       currentMessage,
       history,
-      sme.prompt
+      sme.prompt,
+      fileContents.filter((content) => content !== null) as any[]
     );
 
     const smeResponse: Message = {
@@ -132,6 +185,18 @@ export function Mindspace() {
     };
     setMessages(prev => [...prev, smeResponse]);
     setIsTyping(false);
+
+    const conversationHistory = [...messages, userMessage, smeResponse];
+    const { error } = await supabase.from('conversations').insert([
+      {
+        sme_id: selectedSMEKey,
+        conversation_history: conversationHistory,
+      },
+    ]);
+
+    if (error) {
+      console.error('Error saving conversation:', error);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -387,10 +452,20 @@ export function Mindspace() {
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Recent Conversations</h3>
             <div className="space-y-2">
-              {['Quadratic Equations', 'Calculus Basics', 'Linear Algebra'].map((topic, index) => (
-                <div key={index} className="p-3 rounded-lg bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-colors">
-                  <div className="font-medium text-sm text-gray-900 dark:text-white">{topic}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</div>
+              {recentConversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  className="p-3 rounded-lg bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                >
+                  <div className="font-medium text-sm text-gray-900 dark:text-white">
+                    {conversation.conversation_history[1]?.content}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(conversation.created_at).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
                 </div>
               ))}
             </div>
@@ -400,14 +475,32 @@ export function Mindspace() {
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Learning Resources</h3>
             <div className="space-y-2">
-              <div className="p-3 rounded-lg bg-white/80 dark:bg-gray-800/80">
-                <div className="font-medium text-sm text-gray-900 dark:text-white">Formula Sheet</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Quadratic formulas</div>
-              </div>
-              <div className="p-3 rounded-lg bg-white/80 dark:bg-gray-800/80">
-                <div className="font-medium text-sm text-gray-900 dark:text-white">Practice Problems</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">10 exercises</div>
-              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+                accept=".pdf,.txt,.md"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="w-4 h-4 mr-2" />
+                Upload Files
+              </Button>
+              {uploadedFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className="p-3 rounded-lg bg-white/80 dark:bg-gray-800/80"
+                >
+                  <div className="font-medium text-sm text-gray-900 dark:text-white">
+                    {file.path}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -415,11 +508,30 @@ export function Mindspace() {
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Quick Actions</h3>
             <div className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <Brain className="w-4 h-4 mr-2" />
-                Switch SME
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Brain className="w-4 h-4 mr-2" />
+                    Switch SME
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {Object.keys(smes).map((key) => (
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => setSelectedSMEKey(key as SMEKey)}
+                    >
+                      {smes[key as SMEKey].name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 <BookOpen className="w-4 h-4 mr-2" />
                 Study Materials
               </Button>

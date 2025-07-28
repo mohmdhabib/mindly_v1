@@ -26,7 +26,7 @@ import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 import { generateResponse } from '@/lib/ai';
 import { smes, SMEKey } from '@/lib/sme';
-import { supabase } from '@/lib/supabase';
+import { getConversations, getConversation, createConversation, updateConversation } from '@/lib/services';
 
 interface Conversation {
   id: string;
@@ -89,16 +89,8 @@ export function Mindspace() {
   }, []);
 
   const fetchConversations = async () => {
-    const { data, error } = await supabase
-      .from('conversations')
-      .select('id, title, updated_at')
-      .order('updated_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching conversations:', error);
-    } else {
-      setConversations(data);
-    }
+    const data = await getConversations();
+    setConversations(data);
   };
 
   useEffect(() => {
@@ -159,21 +151,9 @@ export function Mindspace() {
     // Store conversation
     const updatedMessages = [...messages, userMessage, smeResponse];
     if (currentConversationId) {
-      await supabase
-        .from('conversations')
-        .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
-        .eq('id', currentConversationId);
+      await updateConversation(currentConversationId, updatedMessages);
     } else {
-      const { data } = await supabase
-        .from('conversations')
-        .insert({
-          sme_type: selectedSMEKey,
-          title: currentMessage.substring(0, 20),
-          messages: updatedMessages,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-        })
-        .select('id')
-        .single();
+      const data = await createConversation(selectedSMEKey, currentMessage.substring(0, 20), updatedMessages);
       if (data) {
         setCurrentConversationId(data.id);
       }
@@ -182,31 +162,28 @@ export function Mindspace() {
   };
 
   const handleSelectConversation = async (conversationId: string) => {
-    const { data, error } = await supabase
-      .from('conversations')
-      .select('messages, sme_type')
-      .eq('id', conversationId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching conversation:', error);
-    } else {
-      // The 'messages' property is of type `Json | null`.
-      // We need to assert its type to `Message[]` after checking for null.
-      const loadedMessages = (data.messages as unknown as Message[]);
-      // Convert timestamp to Date object
-      if (loadedMessages) {
-        setMessages(
-          loadedMessages.map(msg => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-          }))
-        );
+    const data = await getConversation(conversationId);
+    if (data) {
+      const loadedMessages = data.messages as unknown as Message[];
+      if (Array.isArray(loadedMessages)) {
+        const messagesWithDates = loadedMessages.map(msg => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(messagesWithDates);
+      } else {
+        setMessages([]);
       }
       setSelectedSMEKey(data.sme_type as SMEKey);
       setCurrentConversationId(conversationId);
     }
   };
+
+  const handleNewChat = () => {
+    setMessages([initialMessage]);
+    setCurrentConversationId(null);
+    setCurrentMessage('');
+  }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -459,7 +436,10 @@ export function Mindspace() {
         <div className="space-y-6">
           {/* Conversation History */}
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Recent Conversations</h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Recent Conversations</h3>
+              <Button variant="ghost" size="sm" onClick={handleNewChat}>New Chat</Button>
+            </div>
             <div className="space-y-2">
               {conversations.map((convo) => (
                 <div

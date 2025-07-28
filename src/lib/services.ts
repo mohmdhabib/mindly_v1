@@ -43,15 +43,15 @@ export const getPosts = async () => {
   return Promise.resolve(mockPosts);
 };
 
-// export const votePost = async (postId, type) => {
-//   // const { data, error } = await supabase
-//   //   .from("posts")
-//   //   .update({ upvotes: upvotes + (type === "up" ? 1 : -1) })
-//   //   .eq("id", postId);
-//   // if (error) throw error;
-//   // return data;
-//   return Promise.resolve();
-// };
+export const votePost = async (postId, type) => {
+  // const { data, error } = await supabase
+  //   .from("posts")
+  //   .update({ upvotes: upvotes + (type === "up" ? 1 : -1) })
+  //   .eq("id", postId);
+  // if (error) throw error;
+  // return data;
+  return Promise.resolve();
+};
 
 // LEADERBOARD
 export const getLeaderboard = async () => {
@@ -68,3 +68,62 @@ export const getUserProfile = async () => {
   // return data;
   return Promise.resolve(mockUserProfile);
 };
+
+// CONVERSATIONS
+export const getConversations = async () => {
+    const { data, error } = await supabase
+        .from('conversations')
+        .select('id, title, updated_at')
+        .order('updated_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching conversations:', error);
+        return [];
+    }
+    return data;
+}
+
+export const getConversation = async (conversationId: string) => {
+    const { data, error } = await supabase
+        .from('conversations')
+        .select('messages, sme_type')
+        .eq('id', conversationId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching conversation:', error);
+        return null;
+    }
+    return data;
+}
+
+export const createConversation = async (sme_type: string, title: string, messages: any[]) => {
+    const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+            sme_type,
+            title,
+            messages,
+            user_id: (await supabase.auth.getUser()).data.user?.id,
+        })
+        .select('id')
+        .single();
+
+    if (error) {
+        console.error('Error creating conversation:', error);
+        return null;
+    }
+    return data;
+}
+
+export const updateConversation = async (conversationId: string, messages: any[]) => {
+    const { data, error } = await supabase
+        .from('conversations')
+        .update({ messages, updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+    if (error) {
+        console.error('Error updating conversation:', error);
+    }
+    return data;
+}

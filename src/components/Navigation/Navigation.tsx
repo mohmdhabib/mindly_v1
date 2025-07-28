@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Brain, Rocket, Search, Users, Map, User, Menu, X, Moon, Sun } from 'lucide-react';
+import { Brain, Rocket, Search, Users, Map, User, Menu, X, Moon, Sun, Bell } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Notifications } from '@/components/Notifications/Notifications';
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -31,6 +33,11 @@ export function Navigation() {
   };
 
   const isActive = (path: string) => location.pathname === path;
+
+  const notifications = [
+    { id: 1, message: "New reply on your post 'How to improve my prompting skills?'", timestamp: "2 minutes ago" },
+    { id: 2, message: "@user456 mentioned you in a comment.", timestamp: "1 hour ago" },
+  ];
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -85,6 +92,21 @@ export function Navigation() {
               )}
             </Button>
             
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full w-10 h-10 p-0 hover:bg-white/90 dark:hover:bg-slate-800/90 hover:shadow-lg transition-all duration-300"
+                >
+                  <Bell className="w-4 h-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <Notifications notifications={notifications} />
+              </PopoverContent>
+            </Popover>
+
             <Link to="/my-cortex">
               <Button
                 variant="ghost"

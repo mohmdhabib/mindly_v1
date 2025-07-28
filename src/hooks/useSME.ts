@@ -11,7 +11,7 @@ import {
 import { createStuffDocumentsChain } from 'langchain/chains/combine_documents'
 import { getContext } from '@/lib/context'
 import { HISTORY_MESSAGES_KEY } from '@/lib/constants'
-import { SMEManager } from '@/lib/sme'
+import { smes } from '@/lib/sme'
 
 const llm = new ChatGoogleGenerativeAI({
   model: 'gemini-2.0-flash-lite',
@@ -22,11 +22,10 @@ const embeddings = new GoogleGenerativeAIEmbeddings({
   model: 'embedding-001',
 })
 
-export const useSME = (smeType: keyof SMEManager['smes']) => {
+export const useSME = (smeType: keyof typeof smes) => {
   const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState<any[]>([])
-  const smeManager = new SMEManager()
-  const sme = smeManager.smes[smeType]
+  const sme = smes[smeType]
 
   const prompt = ChatPromptTemplate.fromMessages([
     ['system', sme.prompt],

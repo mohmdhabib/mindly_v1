@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -9,17 +7,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Send, 
-  Mic, 
-  Paperclip, 
-  Settings, 
-  Clock, 
+import {
+  Send,
+  Mic,
+  Paperclip,
+  Settings,
+  Clock,
   ChevronDown,
   Brain,
-  Calculator,
-  Atom,
-  Code,
   BookOpen,
   Copy,
   ThumbsUp,
@@ -28,6 +23,8 @@ import {
 } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { generateResponse } from '@/lib/ai';
+import { smes, SMEKey } from '@/lib/sme';
 
 interface Message {
   id: string;
@@ -45,22 +42,23 @@ interface Message {
   };
 }
 
-export function Mindspace() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'sme',
-      content: "Hello! I'm Dr. Equation, your Mathematics SME. I'm here to help you understand any math concept, from basic arithmetic to advanced calculus. What would you like to learn today?",
-      timestamp: new Date(Date.now() - 300000),
-      sme: {
-        name: 'Dr. Equation',
-        subject: 'Mathematics',
-        avatar: 'DE'
-      }
+const initialMessage: Message = {
+    id: '1',
+    type: 'sme',
+    content: "Hello! I'm Professor Newton, your Mathematics SME. I'm here to help you understand any math concept, from basic arithmetic to advanced calculus. What would you like to learn today?",
+    timestamp: new Date(Date.now() - 300000),
+    sme: {
+      name: 'Professor Newton',
+      subject: 'Mathematics',
+      avatar: 'PN'
     }
-  ]);
+  };
+
+export function Mindspace() {
+  const [messages, setMessages] = useState<Message[]>([initialMessage]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedSMEKey, setSelectedSMEKey] = useState<SMEKey>('math');
   const [sessionTime, setSessionTime] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -92,11 +90,6 @@ export function Mindspace() {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-
-import { generateResponse } from '@/lib/ai';
-import { smes, SMEKey } from '@/lib/sme';
-
-  const [selectedSMEKey, setSelectedSMEKey] = useState<SMEKey>('math');
 
   const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
@@ -308,7 +301,7 @@ import { smes, SMEKey } from '@/lib/sme';
               <div className="flex items-center space-x-2">
                 <Avatar className="w-6 h-6">
                   <AvatarFallback className="bg-gradient-to-br from-mindly-primary to-mindly-accent text-white text-xs font-semibold">
-                    {selectedSME.avatar}
+                    {smes[selectedSMEKey].name.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="bg-white dark:bg-gray-800 rounded-2xl px-4 py-3 shadow-sm border border-gray-200/50 dark:border-gray-700/50">

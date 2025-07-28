@@ -1,15 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Send, Sparkles, Mic, Image, Loader2 } from 'lucide-react';
+import { Search, Send, Mic, Image, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSME } from '@/hooks/useSME';
 import ReactMarkdown from 'react-markdown';
-import { SMEManager } from '@/lib/sme';
+import { smes } from '@/lib/sme';
 
 export function ChatInterface() {
   const [query, setQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [smeType, setSmeType] = useState<keyof SMEManager['smes']>('math');
+  const [smeType, setSmeType] = useState<keyof typeof smes>('math');
   const { isLoading, messages, sendMessage } = useSME(smeType);
   const inputRef = useRef<HTMLInputElement>(null);
 

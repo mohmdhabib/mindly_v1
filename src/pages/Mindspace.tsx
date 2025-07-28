@@ -193,9 +193,15 @@ export function Mindspace() {
     } else {
       // The 'messages' property is of type `Json | null`.
       // We need to assert its type to `Message[]` after checking for null.
-      const loadedMessages = data.messages as unknown as Message[];
+      const loadedMessages = (data.messages as unknown as Message[]);
+      // Convert timestamp to Date object
       if (loadedMessages) {
-        setMessages(loadedMessages);
+        setMessages(
+          loadedMessages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          }))
+        );
       }
       setSelectedSMEKey(data.sme_type as SMEKey);
       setCurrentConversationId(conversationId);

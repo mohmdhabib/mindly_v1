@@ -18,62 +18,57 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthWrapper';
+import { ProfileService } from '@/services/profile.service'
+import { LearningService } from '@/services/learning.service'
 
 export function Launchpad() {
-  const { session } = useAuth();
+  const { session, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('quick-start');
   const [profile, setProfile] = useState<any>(null);
   const [learningPaths, setLearningPaths] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (session) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        if (error) {
-          console.error('Error fetching profile:', error);
-        } else {
-          setProfile(data);
+    const fetchData = async () => {
+      if (!session) return;
+      
+      setIsLoading(true);
+      try {
+        // Fetch profile
+        const profileResponse = await ProfileService.getProfile(session.user.id);
+        if (profileResponse.data) {
+          setProfile(profileResponse.data);
         }
-      }
-    };
 
-    const fetchLearningPaths = async () => {
-      const { data, error } = await supabase
-        .from('learning_paths')
-        .select('*')
-        .limit(3);
-      if (error) {
-        console.error('Error fetching learning paths:', error);
-      } else {
-        setLearningPaths(data);
-      }
-    };
-
-    const fetchRecentActivity = async () => {
-      if (session) {
-        const { data, error } = await supabase
-          .from('user_progress')
-          .select('*, learning_paths(*)')
-          .eq('user_id', session.user.id)
-          .order('last_accessed', { ascending: false })
-          .limit(3);
-        if (error) {
-          console.error('Error fetching recent activity:', error);
-        } else {
-          setRecentActivity(data);
+        // Fetch learning paths
+        const pathsResponse = await LearningService.getLearningPaths(3);
+        if (pathsResponse.data) {
+          setLearningPaths(pathsResponse.data);
         }
+
+        // Fetch user progress
+        const progressResponse = await LearningService.getUserProgress(session.user.id, 3);
+        if (progressResponse.data) {
+          setRecentActivity(progressResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchProfile();
-    fetchLearningPaths();
-    fetchRecentActivity();
+    fetchData();
   }, [session]);
+
+  if (loading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 transition-colors duration-300">

@@ -6,6 +6,11 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Notifications } from '@/components/Notifications/Notifications';
 
+/**
+ * Navigation component for the application.
+ *
+ * @returns {JSX.Element} The rendered Navigation component.
+ */
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);

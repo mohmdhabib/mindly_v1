@@ -303,7 +303,6 @@ export function Mindspace() {
                 <Avatar className="w-6 h-6">
                   <AvatarFallback className="bg-gradient-to-br from-mindly-primary to-mindly-accent text-white text-xs font-semibold">
                     {smes[selectedSMEKey].name.substring(0, 2).toUpperCase()}
-                    {smes[selectedSMEKey].avatar}
                   </AvatarFallback>
                 </Avatar>
                 <div className="bg-white dark:bg-gray-800 rounded-2xl px-4 py-3 shadow-sm border border-gray-200/50 dark:border-gray-700/50">

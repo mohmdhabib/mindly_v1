@@ -14,7 +14,7 @@ import { HISTORY_MESSAGES_KEY } from '@/lib/constants'
 import { SMEManager } from '@/lib/sme'
 
 const llm = new ChatGoogleGenerativeAI({
-  model: 'gemini-pro',
+  model: 'gemini-2.0-flash-lite',
   temperature: 0.7,
 })
 
@@ -52,11 +52,13 @@ export const useSME = (smeType: keyof SMEManager['smes']) => {
 
     const context = await getContext(message, embeddings, 10)
 
-    const response = await chain.invoke({
+    const response = await (await chain).invoke({
       [HISTORY_MESSAGES_KEY]: history,
       context,
       input: message,
     })
+
+    
 
     setMessages((messages) => [
       ...messages,

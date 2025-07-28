@@ -29,6 +29,9 @@ import {
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
+import { generateResponse } from '@/lib/ai';
+import { smes, SMEKey } from '@/lib/sme';
+
 interface Message {
   id: string;
   type: 'user' | 'sme';
@@ -93,8 +96,6 @@ export function Mindspace() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-import { generateResponse } from '@/lib/ai';
-import { smes, SMEKey } from '@/lib/sme';
 
   const [selectedSMEKey, setSelectedSMEKey] = useState<SMEKey>('math');
 
@@ -308,7 +309,7 @@ import { smes, SMEKey } from '@/lib/sme';
               <div className="flex items-center space-x-2">
                 <Avatar className="w-6 h-6">
                   <AvatarFallback className="bg-gradient-to-br from-mindly-primary to-mindly-accent text-white text-xs font-semibold">
-                    {selectedSME.avatar}
+                    {smes[selectedSMEKey].avatar}
                   </AvatarFallback>
                 </Avatar>
                 <div className="bg-white dark:bg-gray-800 rounded-2xl px-4 py-3 shadow-sm border border-gray-200/50 dark:border-gray-700/50">

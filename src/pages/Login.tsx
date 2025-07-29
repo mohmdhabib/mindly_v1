@@ -224,12 +224,6 @@ export const Login = () => {
 
             {/* Auth Form */}
             <div className="relative">
-              // In the Login component, update the Auth component to use our custom signUp function
-              
-          
-              
-              // Then in your Auth component, you can use the supabaseClient directly but override the signUp
-              // This is a simplified example - you may need to adjust based on how you're using Auth UI
               <Auth
                 supabaseClient={supabase}
                 appearance={{ theme: ThemeSupa }}

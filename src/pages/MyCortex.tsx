@@ -157,8 +157,8 @@ export function MyCortex() {
             xp: profileToUse.total_xp || 0,
             nextLevelXP: ((profileToUse.current_level || 1) + 1) * 1000,
             streak: profileToUse.streak_count || 0,
-            joinDate: profileToUse.created_at
-              ? new Date(profileToUse.created_at).toLocaleDateString("en-US", {
+            joinDate: new Date().toISOString()
+              ? new Date().toLocaleDateString("en-US", {
                   month: "long",
                   year: "numeric",
                 })
@@ -321,6 +321,8 @@ export function MyCortex() {
   }, [session?.user?.id, loading]);
 
   // BONUS: Simple version using the new getOrCreateProfile method
+  // Replace the useEffect that fetches user profile data in your MyCortex component
+
   useEffect(() => {
     const fetchProfile = async () => {
       if (loading || !session?.user?.id) {
@@ -330,54 +332,67 @@ export function MyCortex() {
 
       try {
         setIsLoading(true);
+        console.log("🔍 Fetching profile for user ID:", session.user.id);
 
-        // Use the enhanced ProfileService method
+        // Use the enhanced getOrCreateProfile method with retry logic
         const { data, error } = await ProfileService.getOrCreateProfile(
           session.user.id,
-          {
-            username: session.user.email?.split("@")[0] || "User",
-            full_name: "",
-            avatar_url: "",
-            learning_level: "beginner",
-            total_xp: 0,
-            current_level: 1,
-            streak_count: 0,
-            streak_freeze_count: 3,
-            last_active_date: new Date().toISOString().split("T")[0],
-            learning_preferences: {},
-          }
+          5, // maxRetries
+          1500 // retryDelay in ms
         );
 
         if (error) {
-          throw error;
+          console.error("❌ Error getting/creating profile:", error);
+
+          // Set fallback profile data so UI doesn't break
+          setUserProfile({
+            name: session.user.email?.split("@")[0] || "User",
+            email: session.user.email || "",
+            level: 1,
+            xp: 0,
+            nextLevelXP: 1000,
+            streak: 0,
+            joinDate: "New User",
+            completionRate: 0,
+            avatar: getInitials(session.user.email?.split("@")[0] || "User"),
+          });
+
+          setIsLoading(false);
+          return;
         }
 
-        // Profile will always exist now
-        setUserProfile({
-          name: data.full_name || data.username || "User",
-          email: session.user.email || "",
-          level: data.current_level || 1,
-          xp: data.total_xp || 0,
-          nextLevelXP: ((data.current_level || 1) + 1) * 1000,
-          streak: data.streak_count || 0,
-          joinDate: data.created_at
-            ? new Date(data.created_at).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })
-            : "New User",
-          completionRate: 0,
-          avatar:
-            data.avatar_url ||
-            getInitials(data.full_name || data.username || "User"),
-        });
+        if (data) {
+          console.log("✅ Profile data found/created:", data);
 
-        // Update last active (optional)
-        ProfileService.updateLastActive(session.user.id).catch(console.warn);
+          // Update last active date (fire and forget)
+          ProfileService.updateLastActive(session.user.id).catch((err) => {
+            console.warn("⚠️ Failed to update last active date:", err);
+          });
+
+          // Map the Supabase data to our UI format
+          setUserProfile({
+            name: data.full_name || data.username || "User",
+            email: session.user.email || "",
+            level: data.current_level || 1,
+            xp: data.total_xp || 0,
+            nextLevelXP: ((data.current_level || 1) + 1) * 1000,
+            streak: data.streak_count || 0,
+            joinDate: data.created_at
+              ? new Date(data.created_at).toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })
+              : "New User",
+            completionRate: 0, // This would need to be calculated from user_progress
+            avatar:
+              data.avatar_url ||
+              getInitials(data.full_name || data.username || "User"),
+          });
+        }
       } catch (err) {
-        console.error("Profile error:", err);
+        console.error("💥 Exception in profile fetch:", err);
 
-        // Fallback data
+        // Critical fallback: Always set some profile data to prevent UI breaking
         setUserProfile({
           name: session.user.email?.split("@")[0] || "User",
           email: session.user.email || "",
@@ -391,6 +406,7 @@ export function MyCortex() {
         });
       } finally {
         setIsLoading(false);
+        console.log("🏁 Profile fetch complete");
       }
     };
 

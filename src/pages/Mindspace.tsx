@@ -10,7 +10,6 @@ import {
 import {
   Send,
   Mic,
-  Paperclip,
   Settings,
   Clock,
   ChevronDown,
@@ -27,6 +26,8 @@ import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { generateResponse } from '@/lib/ai';
 import { smes, SMEKey } from '@/lib/sme';
 import { getConversations, getConversation, createConversation, updateConversation } from '@/lib/services';
+import { uploadFile } from '@/lib/supabase';
+import { FileUpload } from '@/components/ChatInterface/FileUpload';
 
 interface Conversation {
   id: string;
@@ -72,6 +73,8 @@ export function Mindspace() {
   const [sessionTime, setSessionTime] = useState(0);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -128,7 +131,8 @@ export function Mindspace() {
     const response = await generateResponse(
       currentMessage,
       history,
-      sme.prompt
+      sme.prompt,
+      uploadedFileUrl
     );
 
     const smeResponse: Message = {
@@ -181,6 +185,16 @@ export function Mindspace() {
     setCurrentConversationId(null);
     setCurrentMessage('');
   }
+
+  const handleFileUpload = async (file: File) => {
+    setUploadedFile(file);
+    const data = await uploadFile(file);
+    if (data) {
+      const { data: publicUrlData } = supabase.storage.from('uploads').getPublicUrl(data.path);
+      setUploadedFileUrl(publicUrlData.publicUrl);
+      console.log('File uploaded successfully:', data);
+    }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -401,13 +415,7 @@ export function Mindspace() {
               }}
             />
             <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-full w-8 h-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-600"
-              >
-                <Paperclip className="w-4 h-4" />
-              </Button>
+              <FileUpload onFileUpload={handleFileUpload} />
               <Button
                 variant="ghost"
                 size="sm"

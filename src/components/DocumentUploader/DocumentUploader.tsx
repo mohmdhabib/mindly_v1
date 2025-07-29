@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Paperclip } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -62,6 +63,10 @@ export function DocumentUploader() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Upload a document</DialogTitle>
+          <DialogDescription>
+            Select a file to upload. The file will be processed and you can then
+            ask questions about its content.
+          </DialogDescription>
         </DialogHeader>
         <div className="p-4">
           <input type="file" onChange={handleFileChange} />

@@ -9,7 +9,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Home } from '@/pages/Home';
 import { Launchpad } from '@/pages/Launchpad';
 import { Mindspace } from '@/pages/Mindspace';
-import { Arena } from '@/pages/Arena';
+import Arena  from '@/pages/Arena';
 import { Community } from '@/pages/Community';
 import { Pathways } from '@/pages/Pathways';
 import { MyCortex } from '@/pages/MyCortex';

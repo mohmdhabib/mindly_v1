@@ -10,6 +10,7 @@ import { Home } from '@/pages/Home';
 import { Launchpad } from '@/pages/Launchpad';
 import { Mindspace } from '@/pages/Mindspace';
 import { Arena } from '@/pages/Arena';
+import { StartChallenge } from '@/pages/StartChallenge';
 import { Community } from '@/pages/Community';
 import { Pathways } from '@/pages/Pathways';
 import { MyCortex } from '@/pages/MyCortex';
@@ -30,6 +31,7 @@ function App() {
                   <Route path="/launchpad" element={<Launchpad />} />
                   <Route path="/mindspace" element={<Mindspace />} />
                   <Route path="/arena" element={<Arena />} />
+                  <Route path="/arena/challenge/:challengeId" element={<StartChallenge />} />
                   <Route path="/community" element={<Community />} />
                   <Route path="/pathways" element={<Pathways />} />
                   <Route path="/my-cortex" element={<MyCortex />} />

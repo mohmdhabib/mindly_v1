@@ -27,18 +27,18 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/AuthWrapper";
 import { ProfileService } from "@/services/profile.service";
+import { ProfileForms } from "@/services/ProfileForms";
 
 export function MyCortex() {
   const { session, loading } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [showProfileForms, setShowProfileForms] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
     sms: false,
     marketing: false,
   });
-
-  // State for user profile data
   const [userProfile, setUserProfile] = useState({
     name: "",
     email: "",
@@ -49,251 +49,60 @@ export function MyCortex() {
     joinDate: "",
     completionRate: 0,
     avatar: "",
+    // Additional fields that might be used in ProfileForms
+    bio: "",
+    phone: "",
+    dateOfBirth: "",
+    location: "",
+    preferences: {},
+    socialLinks: {},
   });
-
-  // Loading state for profile data
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user profile data
-  // Update the useEffect hook that fetches user profile data
-  // FIXED useEffect with proper error handling and fallbacks
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      // Enhanced session validation
-      if (!session) {
-        console.log("❌ No session available");
-        setIsLoading(false);
-        return;
-      }
+  // Handle navigation to ProfileForms
+  const handleEditProfile = () => {
+    setShowProfileForms(true);
+  };
 
-      if (!session.user?.id) {
-        console.log("❌ No user ID in session");
-        setIsLoading(false);
-        return;
-      }
+  // Handle back navigation from ProfileForms
+  const handleBackFromProfileForms = () => {
+    setShowProfileForms(false);
+    // Refresh profile data after editing
+    fetchProfileData();
+  };
 
-      try {
-        setIsLoading(true);
-        console.log("🔍 Fetching profile for user ID:", session.user.id);
+  // Handle profile update from ProfileForms
+  const handleProfileUpdate = (updatedData) => {
+    setUserProfile((prev) => ({
+      ...prev,
+      ...updatedData,
+      // Ensure core fields are preserved
+      level: prev.level,
+      xp: prev.xp,
+      nextLevelXP: prev.nextLevelXP,
+      streak: prev.streak,
+    }));
+    setShowProfileForms(false);
+    // Optionally refresh from server to get latest data
+    fetchProfileData();
+  };
 
-        const { data, error } = await ProfileService.getProfile(
-          session.user.id
-        );
-
-        // Handle database errors
-        if (error) {
-          console.error("❌ Error fetching profile:", error);
-
-          // Set fallback profile data so UI doesn't break
-          setUserProfile({
-            name: session.user.email?.split("@")[0] || "User",
-            email: session.user.email || "",
-            level: 1,
-            xp: 0,
-            nextLevelXP: 1000,
-            streak: 0,
-            joinDate: "New User",
-            completionRate: 0,
-            avatar: getInitials(session.user.email?.split("@")[0] || "User"),
-          });
-
-          setIsLoading(false);
-          return;
-        }
-
-        // No profile found - create new one
-        if (!data) {
-          console.log("📝 No profile data found, creating new profile");
-
-          const newProfile = {
-            id: session.user.id,
-            username: session.user.email?.split("@")[0] || "User",
-            full_name: "",
-            avatar_url: "",
-            learning_level: "beginner",
-            total_xp: 0,
-            current_level: 1,
-            streak_count: 0,
-            streak_freeze_count: 3,
-            last_active_date: new Date().toISOString().split("T")[0],
-            learning_preferences: {},
-          };
-
-          const { data: createdProfile, error: createError } =
-            await ProfileService.createProfile(newProfile);
-
-          if (createError) {
-            console.error("❌ Error creating profile:", createError);
-
-            // Even if creation fails, set default profile data
-            setUserProfile({
-              name: newProfile.username,
-              email: session.user.email || "",
-              level: newProfile.current_level,
-              xp: newProfile.total_xp,
-              nextLevelXP: 1000,
-              streak: newProfile.streak_count,
-              joinDate: new Date().toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              }),
-              completionRate: 0,
-              avatar: getInitials(newProfile.username),
-            });
-
-            setIsLoading(false);
-            return;
-          }
-
-          console.log("✅ Profile created successfully:", createdProfile);
-
-          // Use the created profile data (which includes created_at, etc.)
-          const profileToUse = createdProfile || newProfile;
-
-          setUserProfile({
-            name: profileToUse.username || "User",
-            email: session.user.email || "",
-            level: profileToUse.current_level || 1,
-            xp: profileToUse.total_xp || 0,
-            nextLevelXP: ((profileToUse.current_level || 1) + 1) * 1000,
-            streak: profileToUse.streak_count || 0,
-            joinDate: new Date().toISOString()
-              ? new Date().toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })
-              : new Date().toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                }),
-            completionRate: 0,
-            avatar: getInitials(profileToUse.username || "User"),
-          });
-        } else {
-          // Profile exists - use it
-          console.log("✅ Profile data found:", data);
-
-          // Update last active date (don't wait for it, and handle errors gracefully)
-          ProfileService.updateLastActive(session.user.id).catch((err) => {
-            console.warn("⚠️ Failed to update last active date:", err);
-          });
-
-          // Map the Supabase data to our UI format
-          setUserProfile({
-            name: data.full_name || data.username || "User",
-            email: session.user.email || "",
-            level: data.current_level || 1,
-            xp: data.total_xp || 0,
-            nextLevelXP: ((data.current_level || 1) + 1) * 1000,
-            streak: data.streak_count || 0,
-            joinDate: data.created_at
-              ? new Date(data.created_at).toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })
-              : "New User",
-            completionRate: 0, // This would need to be calculated from user_progress
-            avatar:
-              data.avatar_url ||
-              getInitials(data.full_name || data.username || "User"),
-          });
-        }
-      } catch (err) {
-        console.error("💥 Exception in profile fetch:", err);
-
-        // Critical fallback: Always set some profile data to prevent UI breaking
-        setUserProfile({
-          name: session.user.email?.split("@")[0] || "User",
-          email: session.user.email || "",
-          level: 1,
-          xp: 0,
-          nextLevelXP: 1000,
-          streak: 0,
-          joinDate: "New User",
-          completionRate: 0,
-          avatar: getInitials(session.user.email?.split("@")[0] || "User"),
-        });
-      } finally {
-        setIsLoading(false);
-        console.log("🏁 Profile fetch complete");
-      }
-    };
-
-    // Enhanced dependency check
-    if (loading) {
-      console.log("⏳ Auth still loading, waiting...");
-      return;
-    }
-
-    if (!session) {
-      console.log("❌ No session, setting loading to false");
+  // Extract fetchProfileData for reuse
+  const fetchProfileData = async () => {
+    if (loading || !session?.user?.id) {
       setIsLoading(false);
       return;
     }
 
-    console.log("🚀 Starting profile fetch process");
-    fetchUserProfile();
-  }, [session?.user?.id, loading]); // Only depend on user ID and loading state
+    try {
+      setIsLoading(true);
+      const { data, error } = await ProfileService.getOrCreateProfile(
+        session.user.id,
+        5,
+        1500
+      );
 
-  // ALTERNATIVE: Even more robust version with retry logic
-  useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
-    let retryTimeout: NodeJS.Timeout;
-
-    const fetchUserProfileWithRetry = async (): Promise<void> => {
-      // Skip if still loading or no session
-      if (loading || !session?.user?.id) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        console.log(
-          `🔍 Fetching profile (attempt ${retryCount + 1}/${maxRetries + 1})`
-        );
-
-        const { data, error } = await ProfileService.getProfile(
-          session.user.id
-        );
-
-        if (error) {
-          throw new Error(`Profile fetch error: ${error.message}`);
-        }
-
-        // Reset retry count on success
-        retryCount = 0;
-
-        if (!data) {
-          // Create profile logic (same as above)
-          console.log("📝 Creating new profile...");
-          // ... profile creation code
-        } else {
-          // Use existing profile (same as above)
-          console.log("✅ Profile found");
-          // ... profile mapping code
-        }
-      } catch (err) {
-        console.error(
-          `❌ Profile fetch failed (attempt ${retryCount + 1}):`,
-          err
-        );
-
-        if (retryCount < maxRetries) {
-          retryCount++;
-          console.log(
-            `🔄 Retrying in 2 seconds... (${retryCount}/${maxRetries})`
-          );
-
-          retryTimeout = setTimeout(() => {
-            fetchUserProfileWithRetry();
-          }, 2000);
-          return;
-        }
-
-        // Max retries reached, set fallback data
-        console.error("💥 Max retries reached, using fallback data");
+      if (error) {
         setUserProfile({
           name: session.user.email?.split("@")[0] || "User",
           email: session.user.email || "",
@@ -304,136 +113,101 @@ export function MyCortex() {
           joinDate: "New User",
           completionRate: 0,
           avatar: getInitials(session.user.email?.split("@")[0] || "User"),
+          bio: "",
+          phone: "",
+          dateOfBirth: "",
+          location: "",
+          preferences: {},
+          socialLinks: {},
         });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserProfileWithRetry();
-
-    // Cleanup function
-    return () => {
-      if (retryTimeout) {
-        clearTimeout(retryTimeout);
-      }
-    };
-  }, [session?.user?.id, loading]);
-
-  // BONUS: Simple version using the new getOrCreateProfile method
-  // Replace the useEffect that fetches user profile data in your MyCortex component
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (loading || !session?.user?.id) {
         setIsLoading(false);
         return;
       }
 
-      try {
-        setIsLoading(true);
-        console.log("🔍 Fetching profile for user ID:", session.user.id);
-
-        // Use the enhanced getOrCreateProfile method with retry logic
-        const { data, error } = await ProfileService.getOrCreateProfile(
-          session.user.id,
-          5, // maxRetries
-          1500 // retryDelay in ms
-        );
-
-        if (error) {
-          console.error("❌ Error getting/creating profile:", error);
-
-          // Set fallback profile data so UI doesn't break
-          setUserProfile({
-            name: session.user.email?.split("@")[0] || "User",
-            email: session.user.email || "",
-            level: 1,
-            xp: 0,
-            nextLevelXP: 1000,
-            streak: 0,
-            joinDate: "New User",
-            completionRate: 0,
-            avatar: getInitials(session.user.email?.split("@")[0] || "User"),
-          });
-
-          setIsLoading(false);
-          return;
-        }
-
-        if (data) {
-          console.log("✅ Profile data found/created:", data);
-
-          // Update last active date (fire and forget)
-          ProfileService.updateLastActive(session.user.id).catch((err) => {
-            console.warn("⚠️ Failed to update last active date:", err);
-          });
-
-          // Map the Supabase data to our UI format
-          setUserProfile({
-            name: data.full_name || data.username || "User",
-            email: session.user.email || "",
-            level: data.current_level || 1,
-            xp: data.total_xp || 0,
-            nextLevelXP: ((data.current_level || 1) + 1) * 1000,
-            streak: data.streak_count || 0,
-            joinDate: data.created_at
-              ? new Date(data.created_at).toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })
-              : "New User",
-            completionRate: 0, // This would need to be calculated from user_progress
-            avatar:
-              data.avatar_url ||
-              getInitials(data.full_name || data.username || "User"),
-          });
-        }
-      } catch (err) {
-        console.error("💥 Exception in profile fetch:", err);
-
-        // Critical fallback: Always set some profile data to prevent UI breaking
+      if (data) {
+        ProfileService.updateLastActive(session.user.id).catch(() => {});
         setUserProfile({
-          name: session.user.email?.split("@")[0] || "User",
+          name: data.full_name || data.username || "User",
           email: session.user.email || "",
-          level: 1,
-          xp: 0,
-          nextLevelXP: 1000,
-          streak: 0,
-          joinDate: "New User",
+          level: data.current_level || 1,
+          xp: data.total_xp || 0,
+          nextLevelXP: ((data.current_level || 1) + 1) * 1000,
+          streak: data.streak_count || 0,
+          joinDate: data.created_at
+            ? new Date(data.created_at).toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              })
+            : "New User",
           completionRate: 0,
-          avatar: getInitials(session.user.email?.split("@")[0] || "User"),
+          avatar:
+            data.avatar_url ||
+            getInitials(data.full_name || data.username || "User"),
+          // Additional profile fields from ProfileForms
+          bio: data.bio || "",
+          phone: data.phone || "",
+          dateOfBirth: data.date_of_birth || "",
+          location: data.location || "",
+          preferences: data.preferences || {},
+          socialLinks: data.social_links || {},
         });
-      } finally {
-        setIsLoading(false);
-        console.log("🏁 Profile fetch complete");
       }
-    };
+    } catch (err) {
+      setUserProfile({
+        name: session.user.email?.split("@")[0] || "User",
+        email: session.user.email || "",
+        level: 1,
+        xp: 0,
+        nextLevelXP: 1000,
+        streak: 0,
+        joinDate: "New User",
+        completionRate: 0,
+        avatar: getInitials(session.user.email?.split("@")[0] || "User"),
+        bio: "",
+        phone: "",
+        dateOfBirth: "",
+        location: "",
+        preferences: {},
+        socialLinks: {},
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchProfile();
+  // Fetch user profile with error handling and fallbacks
+  useEffect(() => {
+    fetchProfileData();
   }, [session?.user?.id, loading]);
 
-  // Helper function to get initials from name
-  const getInitials = (name: string) => {
-    return name
+  const getInitials = (name) =>
+    name
       .split(" ")
       .map((part) => part[0])
       .join("")
       .toUpperCase()
       .substring(0, 2);
-  };
 
-  // Show loading spinner while data is being fetched
-  if (loading || isLoading) {
+  if (loading || isLoading)
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mindly-primary"></div>
       </div>
     );
+
+  // Show ProfileForms component if editing
+  if (showProfileForms) {
+    return (
+      <ProfileForms
+        initialData={userProfile}
+        onBack={handleBackFromProfileForms}
+        onSave={handleProfileUpdate}
+        userId={session?.user?.id}
+      />
+    );
   }
 
-  // For now, we'll keep these as hardcoded data
-  // In a real implementation, these would also be fetched from the backend
+  // Static data
   const learningStats = {
     totalHours: 142,
     coursesCompleted: 8,
@@ -442,7 +216,6 @@ export function MyCortex() {
     weeklyGoal: 10,
     weeklyProgress: 7,
   };
-
   const achievements = [
     {
       title: "First Steps",
@@ -480,7 +253,6 @@ export function MyCortex() {
       progress: 40,
     },
   ];
-
   const recentActivity = [
     {
       type: "lesson",
@@ -507,7 +279,6 @@ export function MyCortex() {
       subject: "Programming",
     },
   ];
-
   const savedContent = [
     {
       title: "Quadratic Formula Explained",
@@ -534,7 +305,6 @@ export function MyCortex() {
       date: "2024-11-14",
     },
   ];
-
   const weeklyActivity = [
     { day: "Mon", hours: 2.5 },
     { day: "Tue", hours: 1.8 },
@@ -544,13 +314,48 @@ export function MyCortex() {
     { day: "Sat", hours: 0.8 },
     { day: "Sun", hours: 2.3 },
   ];
-
   const subjectProgress = [
     { subject: "Mathematics", progress: 85, color: "bg-blue-500" },
     { subject: "Programming", progress: 72, color: "bg-green-500" },
     { subject: "Physics", progress: 68, color: "bg-purple-500" },
     { subject: "Languages", progress: 45, color: "bg-orange-500" },
   ];
+
+  const tabConfig = [
+    { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "progress", label: "Progress", icon: TrendingUp },
+    { id: "library", label: "My Library", icon: BookOpen },
+    { id: "achievements", label: "Achievements", icon: Trophy },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
+
+  const getActivityIcon = (type) => {
+    const icons = {
+      lesson: BookOpen,
+      achievement: Trophy,
+      discussion: MessageCircle,
+      course: Target,
+    };
+    return icons[type] || BookOpen;
+  };
+
+  const getActivityBg = (type) => {
+    const bgs = {
+      lesson: "bg-blue-100 dark:bg-blue-900/30",
+      achievement: "bg-yellow-100 dark:bg-yellow-900/30",
+      discussion: "bg-green-100 dark:bg-green-900/30",
+      course: "bg-purple-100 dark:bg-purple-900/30",
+    };
+    return bgs[type] || "bg-blue-100 dark:bg-blue-900/30";
+  };
+
+  const StatCard = ({ icon: Icon, value, label, bgColor }) => (
+    <Card className={`p-4 text-center ${bgColor}`}>
+      <Icon className="w-8 h-8 mx-auto mb-2" />
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-xs">{label}</div>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-mindly-bg dark:bg-gray-900 py-8">
@@ -575,13 +380,7 @@ export function MyCortex() {
         {/* Navigation Tabs */}
         <div className="flex justify-center mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-full p-1 shadow-lg">
-            {[
-              { id: "overview", label: "Overview", icon: BarChart3 },
-              { id: "progress", label: "Progress", icon: TrendingUp },
-              { id: "library", label: "My Library", icon: BookOpen },
-              { id: "achievements", label: "Achievements", icon: Trophy },
-              { id: "settings", label: "Settings", icon: Settings },
-            ].map((tab) => (
+            {tabConfig.map((tab) => (
               <Button
                 key={tab.id}
                 variant={activeTab === tab.id ? "default" : "ghost"}
@@ -599,7 +398,7 @@ export function MyCortex() {
           </div>
         </div>
 
-        {/* Content based on active tab */}
+        {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Profile Card */}
@@ -615,6 +414,7 @@ export function MyCortex() {
                     <Button
                       size="sm"
                       className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
+                      onClick={handleEditProfile}
                     >
                       <Camera className="w-4 h-4" />
                     </Button>
@@ -622,10 +422,19 @@ export function MyCortex() {
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                     {userProfile.name}
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  <p className="text-gray-600 dark:text-gray-300 mb-2">
                     {userProfile.email}
                   </p>
-
+                  {userProfile.bio && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 italic">
+                      {userProfile.bio}
+                    </p>
+                  )}
+                  {userProfile.location && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                      📍 {userProfile.location}
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-mindly-primary">
@@ -644,7 +453,6 @@ export function MyCortex() {
                       </div>
                     </div>
                   </div>
-
                   <div className="mb-4">
                     <div className="flex items-center justify-between text-sm mb-2">
                       <span className="text-gray-600 dark:text-gray-300">
@@ -658,8 +466,10 @@ export function MyCortex() {
                       value={(userProfile.xp / userProfile.nextLevelXP) * 100}
                     />
                   </div>
-
-                  <Button className="w-full bg-mindly-primary hover:bg-mindly-primary/90">
+                  <Button
+                    className="w-full bg-mindly-primary hover:bg-mindly-primary/90"
+                    onClick={handleEditProfile}
+                  >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Profile
                   </Button>
@@ -671,45 +481,30 @@ export function MyCortex() {
             <div className="lg:col-span-2 space-y-6">
               {/* Learning Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="p-4 text-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-                  <Clock className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-                    {learningStats.totalHours}
-                  </div>
-                  <div className="text-xs text-blue-600 dark:text-blue-500">
-                    Total Hours
-                  </div>
-                </Card>
-
-                <Card className="p-4 text-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-                  <BookOpen className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-                    {learningStats.coursesCompleted}
-                  </div>
-                  <div className="text-xs text-green-600 dark:text-green-500">
-                    Completed
-                  </div>
-                </Card>
-
-                <Card className="p-4 text-center bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-800">
-                  <Activity className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">
-                    {learningStats.currentCourses}
-                  </div>
-                  <div className="text-xs text-purple-600 dark:text-purple-500">
-                    In Progress
-                  </div>
-                </Card>
-
-                <Card className="p-4 text-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-800">
-                  <Star className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-                    {learningStats.averageScore}%
-                  </div>
-                  <div className="text-xs text-orange-600 dark:text-orange-500">
-                    Avg Score
-                  </div>
-                </Card>
+                <StatCard
+                  icon={Clock}
+                  value={learningStats.totalHours}
+                  label="Total Hours"
+                  bgColor="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800 text-blue-600"
+                />
+                <StatCard
+                  icon={BookOpen}
+                  value={learningStats.coursesCompleted}
+                  label="Completed"
+                  bgColor="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800 text-green-600"
+                />
+                <StatCard
+                  icon={Activity}
+                  value={learningStats.currentCourses}
+                  label="In Progress"
+                  bgColor="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-800 text-purple-600"
+                />
+                <StatCard
+                  icon={Star}
+                  value={`${learningStats.averageScore}%`}
+                  label="Avg Score"
+                  bgColor="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-800 text-orange-600"
+                />
               </div>
 
               {/* Weekly Activity Chart */}
@@ -757,54 +552,40 @@ export function MyCortex() {
                   Recent Activity
                 </h3>
                 <div className="space-y-3">
-                  {recentActivity.map((activity, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50"
-                    >
+                  {recentActivity.map((activity, index) => {
+                    const Icon = getActivityIcon(activity.type);
+                    return (
                       <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          activity.type === "lesson"
-                            ? "bg-blue-100 dark:bg-blue-900/30"
-                            : activity.type === "achievement"
-                            ? "bg-yellow-100 dark:bg-yellow-900/30"
-                            : activity.type === "discussion"
-                            ? "bg-green-100 dark:bg-green-900/30"
-                            : "bg-purple-100 dark:bg-purple-900/30"
-                        }`}
+                        key={index}
+                        className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50"
                       >
-                        {activity.type === "lesson" && (
-                          <BookOpen className="w-4 h-4 text-blue-600" />
-                        )}
-                        {activity.type === "achievement" && (
-                          <Trophy className="w-4 h-4 text-yellow-600" />
-                        )}
-                        {activity.type === "discussion" && (
-                          <MessageCircle className="w-4 h-4 text-green-600" />
-                        )}
-                        {activity.type === "course" && (
-                          <Target className="w-4 h-4 text-purple-600" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 dark:text-white text-sm">
-                          {activity.title}
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${getActivityBg(
+                            activity.type
+                          )}`}
+                        >
+                          <Icon className="w-4 h-4 text-blue-600" />
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {activity.subject} • {activity.time}
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900 dark:text-white text-sm">
+                            {activity.title}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {activity.subject} • {activity.time}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
             </div>
           </div>
         )}
 
+        {/* Progress Tab */}
         {activeTab === "progress" && (
           <div className="space-y-8">
-            {/* Subject Progress */}
             <Card className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
                 <PieChart className="w-6 h-6 mr-2 text-mindly-primary" />
@@ -833,8 +614,6 @@ export function MyCortex() {
                 ))}
               </div>
             </Card>
-
-            {/* Learning Goals */}
             <Card className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
                 <Target className="w-6 h-6 mr-2 text-mindly-accent" />
@@ -853,7 +632,6 @@ export function MyCortex() {
                     Due: December 31, 2024 • 75% complete
                   </div>
                 </div>
-
                 <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-gray-900 dark:text-white">
@@ -871,6 +649,7 @@ export function MyCortex() {
           </div>
         )}
 
+        {/* Library Tab */}
         {activeTab === "library" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -882,7 +661,6 @@ export function MyCortex() {
                 Export All
               </Button>
             </div>
-
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {savedContent.map((item, index) => (
                 <Card
@@ -915,12 +693,12 @@ export function MyCortex() {
           </div>
         )}
 
+        {/* Achievements Tab */}
         {activeTab === "achievements" && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
               Your Achievements
             </h2>
-
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {achievements.map((achievement, index) => (
                 <Card
@@ -963,7 +741,6 @@ export function MyCortex() {
                     >
                       {achievement.description}
                     </p>
-
                     {achievement.earned ? (
                       <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
                         Earned {achievement.date}
@@ -983,9 +760,9 @@ export function MyCortex() {
           </div>
         )}
 
+        {/* Settings Tab */}
         {activeTab === "settings" && (
           <div className="max-w-4xl mx-auto space-y-8">
-            {/* Profile Settings */}
             <Card className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
                 <User className="w-5 h-5 mr-2" />
@@ -1013,9 +790,16 @@ export function MyCortex() {
                   />
                 </div>
               </div>
+              <div className="mt-6">
+                <Button
+                  className="bg-mindly-primary hover:bg-mindly-primary/90"
+                  onClick={handleEditProfile}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Full Profile
+                </Button>
+              </div>
             </Card>
-
-            {/* Notification Settings */}
             <Card className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
                 <Bell className="w-5 h-5 mr-2" />
@@ -1046,8 +830,6 @@ export function MyCortex() {
                 ))}
               </div>
             </Card>
-
-            {/* Learning Preferences */}
             <Card className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
                 <Settings className="w-5 h-5 mr-2" />
@@ -1065,7 +847,6 @@ export function MyCortex() {
                     <option>Mixed</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Daily Learning Goal (hours)
@@ -1081,8 +862,6 @@ export function MyCortex() {
                 </div>
               </div>
             </Card>
-
-            {/* Privacy & Security */}
             <Card className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
                 <Shield className="w-5 h-5 mr-2" />
@@ -1109,3 +888,5 @@ export function MyCortex() {
     </div>
   );
 }
+
+export default MyCortex;

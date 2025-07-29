@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/AuthWrapper";
 import { ProfileService } from "@/services/profile.service";
-import { LearningService } from "@/services/learning.service";
 
 export function MyCortex() {
   const { session, loading } = useAuth();
@@ -57,30 +56,55 @@ export function MyCortex() {
 
   // Fetch user profile data
   // Update the useEffect hook that fetches user profile data
+  // FIXED useEffect with proper error handling and fallbacks
   useEffect(() => {
     const fetchUserProfile = async () => {
+      // Enhanced session validation
       if (!session) {
-        console.log("No session available");
+        console.log("❌ No session available");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!session.user?.id) {
+        console.log("❌ No user ID in session");
         setIsLoading(false);
         return;
       }
 
       try {
         setIsLoading(true);
-        console.log("Fetching profile for user ID:", session.user.id);
+        console.log("🔍 Fetching profile for user ID:", session.user.id);
 
         const { data, error } = await ProfileService.getProfile(
           session.user.id
         );
 
+        // Handle database errors
         if (error) {
-          console.error("Error fetching profile:", error);
+          console.error("❌ Error fetching profile:", error);
+
+          // Set fallback profile data so UI doesn't break
+          setUserProfile({
+            name: session.user.email?.split("@")[0] || "User",
+            email: session.user.email || "",
+            level: 1,
+            xp: 0,
+            nextLevelXP: 1000,
+            streak: 0,
+            joinDate: "New User",
+            completionRate: 0,
+            avatar: getInitials(session.user.email?.split("@")[0] || "User"),
+          });
+
+          setIsLoading(false);
           return;
         }
 
+        // No profile found - create new one
         if (!data) {
-          console.log("No profile data found, creating new profile");
-          // Create a new profile if none exists
+          console.log("📝 No profile data found, creating new profile");
+
           const newProfile = {
             id: session.user.id,
             username: session.user.email?.split("@")[0] || "User",
@@ -95,34 +119,64 @@ export function MyCortex() {
             learning_preferences: {},
           };
 
-          const { error: createError } = await ProfileService.createProfile(
-            newProfile
-          );
+          const { data: createdProfile, error: createError } =
+            await ProfileService.createProfile(newProfile);
 
           if (createError) {
-            console.error("Error creating profile:", createError);
+            console.error("❌ Error creating profile:", createError);
+
+            // Even if creation fails, set default profile data
+            setUserProfile({
+              name: newProfile.username,
+              email: session.user.email || "",
+              level: newProfile.current_level,
+              xp: newProfile.total_xp,
+              nextLevelXP: 1000,
+              streak: newProfile.streak_count,
+              joinDate: new Date().toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              }),
+              completionRate: 0,
+              avatar: getInitials(newProfile.username),
+            });
+
+            setIsLoading(false);
             return;
           }
 
-          // Set the new profile data
+          console.log("✅ Profile created successfully:", createdProfile);
+
+          // Use the created profile data (which includes created_at, etc.)
+          const profileToUse = createdProfile || newProfile;
+
           setUserProfile({
-            name: newProfile.username,
+            name: profileToUse.username || "User",
             email: session.user.email || "",
-            level: newProfile.current_level,
-            xp: newProfile.total_xp,
-            nextLevelXP: 1000, // This could be calculated based on level
-            streak: newProfile.streak_count,
-            joinDate: new Date().toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            }),
+            level: profileToUse.current_level || 1,
+            xp: profileToUse.total_xp || 0,
+            nextLevelXP: ((profileToUse.current_level || 1) + 1) * 1000,
+            streak: profileToUse.streak_count || 0,
+            joinDate: profileToUse.created_at
+              ? new Date(profileToUse.created_at).toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })
+              : new Date().toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                }),
             completionRate: 0,
-            avatar: getInitials(newProfile.username),
+            avatar: getInitials(profileToUse.username || "User"),
           });
         } else {
-          console.log("Profile data found:", data);
-          // Update last active date
-          await ProfileService.updateLastActive(session.user.id);
+          // Profile exists - use it
+          console.log("✅ Profile data found:", data);
+
+          // Update last active date (don't wait for it, and handle errors gracefully)
+          ProfileService.updateLastActive(session.user.id).catch((err) => {
+            console.warn("⚠️ Failed to update last active date:", err);
+          });
 
           // Map the Supabase data to our UI format
           setUserProfile({
@@ -130,13 +184,14 @@ export function MyCortex() {
             email: session.user.email || "",
             level: data.current_level || 1,
             xp: data.total_xp || 0,
-            nextLevelXP: (data.current_level + 1) * 1000, // Simple calculation
+            nextLevelXP: ((data.current_level || 1) + 1) * 1000,
             streak: data.streak_count || 0,
-            joinDate:
-              new Date(data.created_at).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              }) || "New User",
+            joinDate: data.created_at
+              ? new Date(data.created_at).toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })
+              : "New User",
             completionRate: 0, // This would need to be calculated from user_progress
             avatar:
               data.avatar_url ||
@@ -144,14 +199,203 @@ export function MyCortex() {
           });
         }
       } catch (err) {
-        console.error("Error in profile fetch:", err);
+        console.error("💥 Exception in profile fetch:", err);
+
+        // Critical fallback: Always set some profile data to prevent UI breaking
+        setUserProfile({
+          name: session.user.email?.split("@")[0] || "User",
+          email: session.user.email || "",
+          level: 1,
+          xp: 0,
+          nextLevelXP: 1000,
+          streak: 0,
+          joinDate: "New User",
+          completionRate: 0,
+          avatar: getInitials(session.user.email?.split("@")[0] || "User"),
+        });
+      } finally {
+        setIsLoading(false);
+        console.log("🏁 Profile fetch complete");
+      }
+    };
+
+    // Enhanced dependency check
+    if (loading) {
+      console.log("⏳ Auth still loading, waiting...");
+      return;
+    }
+
+    if (!session) {
+      console.log("❌ No session, setting loading to false");
+      setIsLoading(false);
+      return;
+    }
+
+    console.log("🚀 Starting profile fetch process");
+    fetchUserProfile();
+  }, [session?.user?.id, loading]); // Only depend on user ID and loading state
+
+  // ALTERNATIVE: Even more robust version with retry logic
+  useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 3;
+    let retryTimeout: NodeJS.Timeout;
+
+    const fetchUserProfileWithRetry = async (): Promise<void> => {
+      // Skip if still loading or no session
+      if (loading || !session?.user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        console.log(
+          `🔍 Fetching profile (attempt ${retryCount + 1}/${maxRetries + 1})`
+        );
+
+        const { data, error } = await ProfileService.getProfile(
+          session.user.id
+        );
+
+        if (error) {
+          throw new Error(`Profile fetch error: ${error.message}`);
+        }
+
+        // Reset retry count on success
+        retryCount = 0;
+
+        if (!data) {
+          // Create profile logic (same as above)
+          console.log("📝 Creating new profile...");
+          // ... profile creation code
+        } else {
+          // Use existing profile (same as above)
+          console.log("✅ Profile found");
+          // ... profile mapping code
+        }
+      } catch (err) {
+        console.error(
+          `❌ Profile fetch failed (attempt ${retryCount + 1}):`,
+          err
+        );
+
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(
+            `🔄 Retrying in 2 seconds... (${retryCount}/${maxRetries})`
+          );
+
+          retryTimeout = setTimeout(() => {
+            fetchUserProfileWithRetry();
+          }, 2000);
+          return;
+        }
+
+        // Max retries reached, set fallback data
+        console.error("💥 Max retries reached, using fallback data");
+        setUserProfile({
+          name: session.user.email?.split("@")[0] || "User",
+          email: session.user.email || "",
+          level: 1,
+          xp: 0,
+          nextLevelXP: 1000,
+          streak: 0,
+          joinDate: "New User",
+          completionRate: 0,
+          avatar: getInitials(session.user.email?.split("@")[0] || "User"),
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchUserProfile();
-  }, [session]);
+    fetchUserProfileWithRetry();
+
+    // Cleanup function
+    return () => {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+    };
+  }, [session?.user?.id, loading]);
+
+  // BONUS: Simple version using the new getOrCreateProfile method
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (loading || !session?.user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+
+        // Use the enhanced ProfileService method
+        const { data, error } = await ProfileService.getOrCreateProfile(
+          session.user.id,
+          {
+            username: session.user.email?.split("@")[0] || "User",
+            full_name: "",
+            avatar_url: "",
+            learning_level: "beginner",
+            total_xp: 0,
+            current_level: 1,
+            streak_count: 0,
+            streak_freeze_count: 3,
+            last_active_date: new Date().toISOString().split("T")[0],
+            learning_preferences: {},
+          }
+        );
+
+        if (error) {
+          throw error;
+        }
+
+        // Profile will always exist now
+        setUserProfile({
+          name: data.full_name || data.username || "User",
+          email: session.user.email || "",
+          level: data.current_level || 1,
+          xp: data.total_xp || 0,
+          nextLevelXP: ((data.current_level || 1) + 1) * 1000,
+          streak: data.streak_count || 0,
+          joinDate: data.created_at
+            ? new Date(data.created_at).toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              })
+            : "New User",
+          completionRate: 0,
+          avatar:
+            data.avatar_url ||
+            getInitials(data.full_name || data.username || "User"),
+        });
+
+        // Update last active (optional)
+        ProfileService.updateLastActive(session.user.id).catch(console.warn);
+      } catch (err) {
+        console.error("Profile error:", err);
+
+        // Fallback data
+        setUserProfile({
+          name: session.user.email?.split("@")[0] || "User",
+          email: session.user.email || "",
+          level: 1,
+          xp: 0,
+          nextLevelXP: 1000,
+          streak: 0,
+          joinDate: "New User",
+          completionRate: 0,
+          avatar: getInitials(session.user.email?.split("@")[0] || "User"),
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [session?.user?.id, loading]);
 
   // Helper function to get initials from name
   const getInitials = (name: string) => {

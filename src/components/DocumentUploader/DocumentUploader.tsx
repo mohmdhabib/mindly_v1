@@ -9,10 +9,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Paperclip } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export function DocumentUploader() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -26,24 +29,27 @@ export function DocumentUploader() {
       .upload(`public/${file.name}`, file, {
         cacheControl: '3600',
         upsert: false,
-        onUploadProgress: (progress) => {
-          setUploadProgress((progress.loaded / progress.total) * 100);
-        },
       });
 
     setIsUploading(false);
 
     if (error) {
-      console.error('Error uploading file:', error);
-      // Handle error state here
+      toast({
+        title: 'Error uploading file',
+        description: error.message,
+        variant: 'destructive',
+      });
     } else {
-      console.log('File uploaded successfully:', data);
-      // Handle success state here
+      toast({
+        title: 'File uploaded successfully',
+        description: data.path,
+      });
+      setIsOpen(false);
     }
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
           variant="ghost"

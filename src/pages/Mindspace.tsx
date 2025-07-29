@@ -21,6 +21,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { DocumentUploader } from '@/components/DocumentUploader/DocumentUploader';
+import { DocumentList } from '@/components/DocumentList/DocumentList';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -79,6 +80,7 @@ export function Mindspace() {
   const [sessionTime, setSessionTime] = useState(0);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -143,7 +145,9 @@ export function Mindspace() {
       queryName: 'match_documents',
     });
 
-    const results = await vectorStore.similaritySearch(currentMessage, 1);
+    const results = await vectorStore.similaritySearch(currentMessage, 1, {
+      documentId: selectedDocument,
+    });
     const context = results.map((res) => res.pageContent).join('\n');
 
     const response = await generateResponse(
@@ -484,6 +488,10 @@ export function Mindspace() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="mt-8">
+            <DocumentList onSelectDocument={setSelectedDocument} />
           </div>
 
           {/* Learning Resources */}

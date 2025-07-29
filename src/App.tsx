@@ -9,12 +9,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Home } from '@/pages/Home';
 import { Launchpad } from '@/pages/Launchpad';
 import { Mindspace } from '@/pages/Mindspace';
-<<<<<<< HEAD
 import { Arena } from '@/pages/Arena';
 import { StartChallenge } from '@/pages/StartChallenge';
-=======
-import Arena  from '@/pages/Arena';
->>>>>>> origin/yadav
 import { Community } from '@/pages/Community';
 import { Pathways } from '@/pages/Pathways';
 import { MyCortex } from '@/pages/MyCortex';

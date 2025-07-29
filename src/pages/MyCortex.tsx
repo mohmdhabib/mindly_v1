@@ -13,17 +13,12 @@ import {
   Clock,
   Target,
   Star,
-  Award,
   TrendingUp,
-  Calendar,
   Download,
   Bookmark,
   MessageCircle,
   Bell,
   Shield,
-  Palette,
-  Volume2,
-  Globe,
   Edit,
   Camera,
   BarChart3,
@@ -61,12 +56,19 @@ export function MyCortex() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch user profile data
+  // Update the useEffect hook that fetches user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
-      if (!session) return;
+      if (!session) {
+        console.log("No session available");
+        setIsLoading(false);
+        return;
+      }
 
       try {
         setIsLoading(true);
+        console.log("Fetching profile for user ID:", session.user.id);
+
         const { data, error } = await ProfileService.getProfile(
           session.user.id
         );
@@ -76,22 +78,69 @@ export function MyCortex() {
           return;
         }
 
-        if (data) {
+        if (!data) {
+          console.log("No profile data found, creating new profile");
+          // Create a new profile if none exists
+          const newProfile = {
+            id: session.user.id,
+            username: session.user.email?.split("@")[0] || "User",
+            full_name: "",
+            avatar_url: "",
+            learning_level: "beginner",
+            total_xp: 0,
+            current_level: 1,
+            streak_count: 0,
+            streak_freeze_count: 3,
+            last_active_date: new Date().toISOString().split("T")[0],
+            learning_preferences: {},
+          };
+
+          const { error: createError } = await ProfileService.createProfile(
+            newProfile
+          );
+
+          if (createError) {
+            console.error("Error creating profile:", createError);
+            return;
+          }
+
+          // Set the new profile data
+          setUserProfile({
+            name: newProfile.username,
+            email: session.user.email || "",
+            level: newProfile.current_level,
+            xp: newProfile.total_xp,
+            nextLevelXP: 1000, // This could be calculated based on level
+            streak: newProfile.streak_count,
+            joinDate: new Date().toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            }),
+            completionRate: 0,
+            avatar: getInitials(newProfile.username),
+          });
+        } else {
+          console.log("Profile data found:", data);
+          // Update last active date
+          await ProfileService.updateLastActive(session.user.id);
+
           // Map the Supabase data to our UI format
           setUserProfile({
             name: data.full_name || data.username || "User",
             email: session.user.email || "",
-            level: data.level || 1,
-            xp: data.xp || 0,
-            nextLevelXP: data.next_level_xp || 1000,
-            streak: data.streak || 0,
+            level: data.current_level || 1,
+            xp: data.total_xp || 0,
+            nextLevelXP: (data.current_level + 1) * 1000, // Simple calculation
+            streak: data.streak_count || 0,
             joinDate:
               new Date(data.created_at).toLocaleDateString("en-US", {
                 month: "long",
                 year: "numeric",
               }) || "New User",
-            completionRate: data.completion_rate || 0,
-            avatar: getInitials(data.full_name || data.username || "User"),
+            completionRate: 0, // This would need to be calculated from user_progress
+            avatar:
+              data.avatar_url ||
+              getInitials(data.full_name || data.username || "User"),
           });
         }
       } catch (err) {

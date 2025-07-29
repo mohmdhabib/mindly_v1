@@ -1,0 +1,77 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Paperclip } from 'lucide-react';
+
+export function DocumentUploader() {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .upload(`public/${file.name}`, file, {
+        cacheControl: '3600',
+        upsert: false,
+        onUploadProgress: (progress) => {
+          setUploadProgress((progress.loaded / progress.total) * 100);
+        },
+      });
+
+    setIsUploading(false);
+
+    if (error) {
+      console.error('Error uploading file:', error);
+      // Handle error state here
+    } else {
+      console.log('File uploaded successfully:', data);
+      // Handle success state here
+    }
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-full w-8 h-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-600"
+        >
+          <Paperclip className="w-4 h-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Upload a document</DialogTitle>
+        </DialogHeader>
+        <div className="p-4">
+          <input type="file" onChange={handleFileChange} />
+          {isUploading && (
+            <div className="mt-4">
+              <p>Uploading... {uploadProgress}%</p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

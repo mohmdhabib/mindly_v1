@@ -10,7 +10,6 @@ import {
 import {
   Send,
   Mic,
-  Paperclip,
   Settings,
   Clock,
   ChevronDown,
@@ -21,12 +20,16 @@ import {
   ThumbsDown,
   MoreHorizontal
 } from 'lucide-react';
+import { DocumentUploader } from '@/components/DocumentUploader/DocumentUploader';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 import { generateResponse } from '@/lib/ai';
 import { smes, SMEKey } from '@/lib/sme';
 import { getConversations, getConversation, createConversation, updateConversation } from '@/lib/services';
+import { supabase } from '@/lib/supabase';
+import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
+import { SupabaseVectorStore } from 'langchain/vectorstores/supabase';
 
 interface Conversation {
   id: string;
@@ -47,6 +50,10 @@ interface Message {
   codeBlock?: {
     language: string;
     code: string;
+  };
+  source?: {
+    name: string;
+    url: string;
   };
 }
 
@@ -125,10 +132,25 @@ export function Mindspace() {
       content: msg.content,
     }));
 
+    const embeddings = new GoogleGenerativeAIEmbeddings({
+      apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+      model: 'embedding-001',
+    });
+
+    const vectorStore = new SupabaseVectorStore(embeddings, {
+      client: supabase,
+      tableName: 'documents',
+      queryName: 'match_documents',
+    });
+
+    const results = await vectorStore.similaritySearch(currentMessage, 1);
+    const context = results.map((res) => res.pageContent).join('\n');
+
     const response = await generateResponse(
       currentMessage,
       history,
-      sme.prompt
+      sme.prompt,
+      context
     );
 
     const smeResponse: Message = {
@@ -139,8 +161,15 @@ export function Mindspace() {
       sme: {
         name: sme.name,
         subject: sme.systemContext,
-        avatar: sme.name.substring(0, 2).toUpperCase()
+        avatar: sme.name.substring(0, 2).toUpperCase(),
       },
+      source:
+        results.length > 0
+          ? {
+              name: results[0].metadata.name as string,
+              url: results[0].metadata.url as string,
+            }
+          : undefined,
     };
     setMessages(prev => [...prev, smeResponse]);
     setIsTyping(false);
@@ -317,6 +346,12 @@ export function Mindspace() {
                       </SyntaxHighlighter>
                     </div>
                   )}
+
+                  {message.source && (
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Source: <a href={message.source.url} target="_blank" rel="noopener noreferrer" className="underline">{message.source.name}</a>
+                    </div>
+                  )}
                 </div>
 
                 {message.type === 'sme' && (
@@ -401,13 +436,7 @@ export function Mindspace() {
               }}
             />
             <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-full w-8 h-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-600"
-              >
-                <Paperclip className="w-4 h-4" />
-              </Button>
+              <DocumentUploader />
               <Button
                 variant="ghost"
                 size="sm"

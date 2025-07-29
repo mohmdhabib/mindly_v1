@@ -9,12 +9,17 @@ const model = new ChatGoogleGenerativeAI({
 export const generateResponse = async (
   prompt: string,
   history: any[],
-  systemContext: string
+  systemContext: string,
+  documentContext?: string
 ) => {
-  const chatPrompt = `${systemContext}\n\n${history
-    .map((h) => `${h.role}: ${h.content}`)
-    .join('\n')}\n\nuser: ${prompt}`
+  const contextPrompt = documentContext
+    ? `\n\nRelevant document context:\n${documentContext}`
+    : '';
 
-  const response = await model.invoke(chatPrompt)
-  return response.content
-}
+  const chatPrompt = `${systemContext}${contextPrompt}\n\n${history
+    .map((h) => `${h.role}: ${h.content}`)
+    .join('\n')}\n\nuser: ${prompt}`;
+
+  const response = await model.invoke(chatPrompt);
+  return response.content;
+};

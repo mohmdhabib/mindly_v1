@@ -1,103 +1,295 @@
-import { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Switch } from '@/components/ui/switch';
-import { 
-  User, 
-  Settings, 
-  Trophy, 
-  BookOpen, 
-  Clock, 
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import {
+  User,
+  Settings,
+  Trophy,
+  BookOpen,
+  Clock,
   Target,
   Star,
-  Award,
   TrendingUp,
-  Calendar,
   Download,
   Bookmark,
   MessageCircle,
   Bell,
   Shield,
-  Palette,
-  Volume2,
-  Globe,
   Edit,
   Camera,
   BarChart3,
   PieChart,
-  Activity
-} from 'lucide-react';
+  Activity,
+} from "lucide-react";
+import { useAuth } from "@/components/AuthWrapper";
+import { ProfileService } from "@/services/profile.service";
+import { LearningService } from "@/services/learning.service";
 
 export function MyCortex() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const { session, loading } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview");
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
     sms: false,
-    marketing: false
+    marketing: false,
   });
 
-  const userProfile = {
-    name: 'Alex Johnson',
-    email: 'alex.johnson@email.com',
-    level: 23,
-    xp: 12450,
-    nextLevelXP: 15000,
-    streak: 7,
-    joinDate: 'March 2024',
-    completionRate: 85,
-    avatar: 'AJ'
+  // State for user profile data
+  const [userProfile, setUserProfile] = useState({
+    name: "",
+    email: "",
+    level: 0,
+    xp: 0,
+    nextLevelXP: 0,
+    streak: 0,
+    joinDate: "",
+    completionRate: 0,
+    avatar: "",
+  });
+
+  // Loading state for profile data
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch user profile data
+  // Update the useEffect hook that fetches user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!session) {
+        console.log("No session available");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        console.log("Fetching profile for user ID:", session.user.id);
+
+        const { data, error } = await ProfileService.getProfile(
+          session.user.id
+        );
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+          return;
+        }
+
+        if (!data) {
+          console.log("No profile data found, creating new profile");
+          // Create a new profile if none exists
+          const newProfile = {
+            id: session.user.id,
+            username: session.user.email?.split("@")[0] || "User",
+            full_name: "",
+            avatar_url: "",
+            learning_level: "beginner",
+            total_xp: 0,
+            current_level: 1,
+            streak_count: 0,
+            streak_freeze_count: 3,
+            last_active_date: new Date().toISOString().split("T")[0],
+            learning_preferences: {},
+          };
+
+          const { error: createError } = await ProfileService.createProfile(
+            newProfile
+          );
+
+          if (createError) {
+            console.error("Error creating profile:", createError);
+            return;
+          }
+
+          // Set the new profile data
+          setUserProfile({
+            name: newProfile.username,
+            email: session.user.email || "",
+            level: newProfile.current_level,
+            xp: newProfile.total_xp,
+            nextLevelXP: 1000, // This could be calculated based on level
+            streak: newProfile.streak_count,
+            joinDate: new Date().toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            }),
+            completionRate: 0,
+            avatar: getInitials(newProfile.username),
+          });
+        } else {
+          console.log("Profile data found:", data);
+          // Update last active date
+          await ProfileService.updateLastActive(session.user.id);
+
+          // Map the Supabase data to our UI format
+          setUserProfile({
+            name: data.full_name || data.username || "User",
+            email: session.user.email || "",
+            level: data.current_level || 1,
+            xp: data.total_xp || 0,
+            nextLevelXP: (data.current_level + 1) * 1000, // Simple calculation
+            streak: data.streak_count || 0,
+            joinDate:
+              new Date(data.created_at).toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              }) || "New User",
+            completionRate: 0, // This would need to be calculated from user_progress
+            avatar:
+              data.avatar_url ||
+              getInitials(data.full_name || data.username || "User"),
+          });
+        }
+      } catch (err) {
+        console.error("Error in profile fetch:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [session]);
+
+  // Helper function to get initials from name
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
   };
 
+  // Show loading spinner while data is being fetched
+  if (loading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mindly-primary"></div>
+      </div>
+    );
+  }
+
+  // For now, we'll keep these as hardcoded data
+  // In a real implementation, these would also be fetched from the backend
   const learningStats = {
     totalHours: 142,
     coursesCompleted: 8,
     currentCourses: 3,
     averageScore: 92,
     weeklyGoal: 10,
-    weeklyProgress: 7
+    weeklyProgress: 7,
   };
 
   const achievements = [
-    { title: 'First Steps', description: 'Completed your first lesson', icon: Star, earned: true, date: '2024-03-15' },
-    { title: 'Week Warrior', description: '7-day learning streak', icon: Trophy, earned: true, date: '2024-11-20' },
-    { title: 'Math Master', description: 'Completed 5 math courses', icon: Target, earned: true, date: '2024-10-12' },
-    { title: 'Speed Learner', description: 'Completed a course in under 2 weeks', icon: Clock, earned: false, progress: 75 },
-    { title: 'Community Helper', description: 'Helped 10 fellow learners', icon: User, earned: false, progress: 40 }
+    {
+      title: "First Steps",
+      description: "Completed your first lesson",
+      icon: Star,
+      earned: true,
+      date: "2024-03-15",
+    },
+    {
+      title: "Week Warrior",
+      description: "7-day learning streak",
+      icon: Trophy,
+      earned: true,
+      date: "2024-11-20",
+    },
+    {
+      title: "Math Master",
+      description: "Completed 5 math courses",
+      icon: Target,
+      earned: true,
+      date: "2024-10-12",
+    },
+    {
+      title: "Speed Learner",
+      description: "Completed a course in under 2 weeks",
+      icon: Clock,
+      earned: false,
+      progress: 75,
+    },
+    {
+      title: "Community Helper",
+      description: "Helped 10 fellow learners",
+      icon: User,
+      earned: false,
+      progress: 40,
+    },
   ];
 
   const recentActivity = [
-    { type: 'lesson', title: 'Completed: Advanced Calculus', time: '2 hours ago', subject: 'Mathematics' },
-    { type: 'achievement', title: 'Earned: Week Warrior badge', time: '1 day ago', subject: 'Achievement' },
-    { type: 'discussion', title: 'Replied to: Integration help', time: '2 days ago', subject: 'Community' },
-    { type: 'course', title: 'Started: React Fundamentals', time: '3 days ago', subject: 'Programming' }
+    {
+      type: "lesson",
+      title: "Completed: Advanced Calculus",
+      time: "2 hours ago",
+      subject: "Mathematics",
+    },
+    {
+      type: "achievement",
+      title: "Earned: Week Warrior badge",
+      time: "1 day ago",
+      subject: "Achievement",
+    },
+    {
+      type: "discussion",
+      title: "Replied to: Integration help",
+      time: "2 days ago",
+      subject: "Community",
+    },
+    {
+      type: "course",
+      title: "Started: React Fundamentals",
+      time: "3 days ago",
+      subject: "Programming",
+    },
   ];
 
   const savedContent = [
-    { title: 'Quadratic Formula Explained', type: 'Conversation', subject: 'Mathematics', date: '2024-11-18' },
-    { title: 'React Hooks Best Practices', type: 'Resource', subject: 'Programming', date: '2024-11-17' },
-    { title: 'Physics Lab Notes', type: 'Notes', subject: 'Physics', date: '2024-11-15' },
-    { title: 'Spanish Vocabulary List', type: 'Study Set', subject: 'Languages', date: '2024-11-14' }
+    {
+      title: "Quadratic Formula Explained",
+      type: "Conversation",
+      subject: "Mathematics",
+      date: "2024-11-18",
+    },
+    {
+      title: "React Hooks Best Practices",
+      type: "Resource",
+      subject: "Programming",
+      date: "2024-11-17",
+    },
+    {
+      title: "Physics Lab Notes",
+      type: "Notes",
+      subject: "Physics",
+      date: "2024-11-15",
+    },
+    {
+      title: "Spanish Vocabulary List",
+      type: "Study Set",
+      subject: "Languages",
+      date: "2024-11-14",
+    },
   ];
 
   const weeklyActivity = [
-    { day: 'Mon', hours: 2.5 },
-    { day: 'Tue', hours: 1.8 },
-    { day: 'Wed', hours: 3.2 },
-    { day: 'Thu', hours: 2.1 },
-    { day: 'Fri', hours: 1.5 },
-    { day: 'Sat', hours: 0.8 },
-    { day: 'Sun', hours: 2.3 }
+    { day: "Mon", hours: 2.5 },
+    { day: "Tue", hours: 1.8 },
+    { day: "Wed", hours: 3.2 },
+    { day: "Thu", hours: 2.1 },
+    { day: "Fri", hours: 1.5 },
+    { day: "Sat", hours: 0.8 },
+    { day: "Sun", hours: 2.3 },
   ];
 
   const subjectProgress = [
-    { subject: 'Mathematics', progress: 85, color: 'bg-blue-500' },
-    { subject: 'Programming', progress: 72, color: 'bg-green-500' },
-    { subject: 'Physics', progress: 68, color: 'bg-purple-500' },
-    { subject: 'Languages', progress: 45, color: 'bg-orange-500' }
+    { subject: "Mathematics", progress: 85, color: "bg-blue-500" },
+    { subject: "Programming", progress: 72, color: "bg-green-500" },
+    { subject: "Physics", progress: 68, color: "bg-purple-500" },
+    { subject: "Languages", progress: 45, color: "bg-orange-500" },
   ];
 
   return (
@@ -115,7 +307,8 @@ export function MyCortex() {
             My Cortex
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Your personalized learning hub. Track progress, manage preferences, and celebrate achievements.
+            Your personalized learning hub. Track progress, manage preferences,
+            and celebrate achievements.
           </p>
         </div>
 
@@ -123,19 +316,19 @@ export function MyCortex() {
         <div className="flex justify-center mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-full p-1 shadow-lg">
             {[
-              { id: 'overview', label: 'Overview', icon: BarChart3 },
-              { id: 'progress', label: 'Progress', icon: TrendingUp },
-              { id: 'library', label: 'My Library', icon: BookOpen },
-              { id: 'achievements', label: 'Achievements', icon: Trophy },
-              { id: 'settings', label: 'Settings', icon: Settings }
+              { id: "overview", label: "Overview", icon: BarChart3 },
+              { id: "progress", label: "Progress", icon: TrendingUp },
+              { id: "library", label: "My Library", icon: BookOpen },
+              { id: "achievements", label: "Achievements", icon: Trophy },
+              { id: "settings", label: "Settings", icon: Settings },
             ].map((tab) => (
               <Button
                 key={tab.id}
-                variant={activeTab === tab.id ? 'default' : 'ghost'}
+                variant={activeTab === tab.id ? "default" : "ghost"}
                 className={`rounded-full px-4 py-2 transition-all duration-200 ${
                   activeTab === tab.id
-                    ? 'bg-mindly-primary text-white shadow-md'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    ? "bg-mindly-primary text-white shadow-md"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 }`}
                 onClick={() => setActiveTab(tab.id)}
               >
@@ -147,7 +340,7 @@ export function MyCortex() {
         </div>
 
         {/* Content based on active tab */}
-        {activeTab === 'overview' && (
+        {activeTab === "overview" && (
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Profile Card */}
             <div className="lg:col-span-1">
@@ -159,7 +352,10 @@ export function MyCortex() {
                         {userProfile.avatar}
                       </AvatarFallback>
                     </Avatar>
-                    <Button size="sm" className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0">
+                    <Button
+                      size="sm"
+                      className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
+                    >
                       <Camera className="w-4 h-4" />
                     </Button>
                   </div>
@@ -169,7 +365,7 @@ export function MyCortex() {
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
                     {userProfile.email}
                   </p>
-                  
+
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-mindly-primary">
@@ -188,7 +384,7 @@ export function MyCortex() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="mb-4">
                     <div className="flex items-center justify-between text-sm mb-2">
                       <span className="text-gray-600 dark:text-gray-300">
@@ -198,9 +394,11 @@ export function MyCortex() {
                         {userProfile.xp} / {userProfile.nextLevelXP} XP
                       </span>
                     </div>
-                    <Progress value={(userProfile.xp / userProfile.nextLevelXP) * 100} />
+                    <Progress
+                      value={(userProfile.xp / userProfile.nextLevelXP) * 100}
+                    />
                   </div>
-                  
+
                   <Button className="w-full bg-mindly-primary hover:bg-mindly-primary/90">
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Profile
@@ -222,7 +420,7 @@ export function MyCortex() {
                     Total Hours
                   </div>
                 </Card>
-                
+
                 <Card className="p-4 text-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
                   <BookOpen className="w-8 h-8 text-green-600 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-green-700 dark:text-green-400">
@@ -232,7 +430,7 @@ export function MyCortex() {
                     Completed
                   </div>
                 </Card>
-                
+
                 <Card className="p-4 text-center bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-800">
                   <Activity className="w-8 h-8 text-purple-600 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">
@@ -242,7 +440,7 @@ export function MyCortex() {
                     In Progress
                   </div>
                 </Card>
-                
+
                 <Card className="p-4 text-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-800">
                   <Star className="w-8 h-8 text-orange-600 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
@@ -262,7 +460,10 @@ export function MyCortex() {
                 </h3>
                 <div className="flex items-end justify-between h-32 mb-4">
                   {weeklyActivity.map((day, index) => (
-                    <div key={index} className="flex flex-col items-center space-y-2">
+                    <div
+                      key={index}
+                      className="flex flex-col items-center space-y-2"
+                    >
                       <div
                         className="bg-mindly-primary rounded-t-lg w-8 transition-all duration-300 hover:bg-mindly-primary/80"
                         style={{ height: `${(day.hours / 4) * 100}%` }}
@@ -275,9 +476,17 @@ export function MyCortex() {
                 </div>
                 <div className="text-center">
                   <div className="text-sm text-gray-600 dark:text-gray-300">
-                    Weekly Goal: {learningStats.weeklyProgress}/{learningStats.weeklyGoal} hours
+                    Weekly Goal: {learningStats.weeklyProgress}/
+                    {learningStats.weeklyGoal} hours
                   </div>
-                  <Progress value={(learningStats.weeklyProgress / learningStats.weeklyGoal) * 100} className="mt-2" />
+                  <Progress
+                    value={
+                      (learningStats.weeklyProgress /
+                        learningStats.weeklyGoal) *
+                      100
+                    }
+                    className="mt-2"
+                  />
                 </div>
               </Card>
 
@@ -289,17 +498,33 @@ export function MyCortex() {
                 </h3>
                 <div className="space-y-3">
                   {recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        activity.type === 'lesson' ? 'bg-blue-100 dark:bg-blue-900/30' :
-                        activity.type === 'achievement' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
-                        activity.type === 'discussion' ? 'bg-green-100 dark:bg-green-900/30' :
-                        'bg-purple-100 dark:bg-purple-900/30'
-                      }`}>
-                        {activity.type === 'lesson' && <BookOpen className="w-4 h-4 text-blue-600" />}
-                        {activity.type === 'achievement' && <Trophy className="w-4 h-4 text-yellow-600" />}
-                        {activity.type === 'discussion' && <MessageCircle className="w-4 h-4 text-green-600" />}
-                        {activity.type === 'course' && <Target className="w-4 h-4 text-purple-600" />}
+                    <div
+                      key={index}
+                      className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          activity.type === "lesson"
+                            ? "bg-blue-100 dark:bg-blue-900/30"
+                            : activity.type === "achievement"
+                            ? "bg-yellow-100 dark:bg-yellow-900/30"
+                            : activity.type === "discussion"
+                            ? "bg-green-100 dark:bg-green-900/30"
+                            : "bg-purple-100 dark:bg-purple-900/30"
+                        }`}
+                      >
+                        {activity.type === "lesson" && (
+                          <BookOpen className="w-4 h-4 text-blue-600" />
+                        )}
+                        {activity.type === "achievement" && (
+                          <Trophy className="w-4 h-4 text-yellow-600" />
+                        )}
+                        {activity.type === "discussion" && (
+                          <MessageCircle className="w-4 h-4 text-green-600" />
+                        )}
+                        {activity.type === "course" && (
+                          <Target className="w-4 h-4 text-purple-600" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="font-medium text-gray-900 dark:text-white text-sm">
@@ -317,7 +542,7 @@ export function MyCortex() {
           </div>
         )}
 
-        {activeTab === 'progress' && (
+        {activeTab === "progress" && (
           <div className="space-y-8">
             {/* Subject Progress */}
             <Card className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
@@ -338,9 +563,11 @@ export function MyCortex() {
                     </div>
                     <Progress value={subject.progress} className="h-3" />
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {subject.progress >= 80 ? 'Excellent progress!' : 
-                       subject.progress >= 60 ? 'Good progress' : 
-                       'Keep going!'}
+                      {subject.progress >= 80
+                        ? "Excellent progress!"
+                        : subject.progress >= 60
+                        ? "Good progress"
+                        : "Keep going!"}
                     </div>
                   </div>
                 ))}
@@ -366,7 +593,7 @@ export function MyCortex() {
                     Due: December 31, 2024 • 75% complete
                   </div>
                 </div>
-                
+
                 <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-gray-900 dark:text-white">
@@ -384,7 +611,7 @@ export function MyCortex() {
           </div>
         )}
 
-        {activeTab === 'library' && (
+        {activeTab === "library" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -398,7 +625,10 @@ export function MyCortex() {
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {savedContent.map((item, index) => (
-                <Card key={index} className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
+                <Card
+                  key={index}
+                  className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300"
+                >
                   <div className="flex items-start justify-between mb-3">
                     <Badge variant="outline" className="text-xs">
                       {item.type}
@@ -425,44 +655,55 @@ export function MyCortex() {
           </div>
         )}
 
-        {activeTab === 'achievements' && (
+        {activeTab === "achievements" && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
               Your Achievements
             </h2>
-            
+
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {achievements.map((achievement, index) => (
-                <Card key={index} className={`p-6 transition-all duration-300 ${
-                  achievement.earned 
-                    ? 'bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-200 dark:border-yellow-800 shadow-lg' 
-                    : 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm opacity-75'
-                }`}>
+                <Card
+                  key={index}
+                  className={`p-6 transition-all duration-300 ${
+                    achievement.earned
+                      ? "bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-200 dark:border-yellow-800 shadow-lg"
+                      : "bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm opacity-75"
+                  }`}
+                >
                   <div className="text-center">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                      achievement.earned 
-                        ? 'bg-gradient-to-br from-yellow-400 to-orange-500' 
-                        : 'bg-gray-200 dark:bg-gray-700'
-                    }`}>
-                      <achievement.icon className={`w-8 h-8 ${
-                        achievement.earned ? 'text-white' : 'text-gray-400'
-                      }`} />
+                    <div
+                      className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                        achievement.earned
+                          ? "bg-gradient-to-br from-yellow-400 to-orange-500"
+                          : "bg-gray-200 dark:bg-gray-700"
+                      }`}
+                    >
+                      <achievement.icon
+                        className={`w-8 h-8 ${
+                          achievement.earned ? "text-white" : "text-gray-400"
+                        }`}
+                      />
                     </div>
-                    <h3 className={`text-lg font-bold mb-2 ${
-                      achievement.earned 
-                        ? 'text-gray-900 dark:text-white' 
-                        : 'text-gray-500 dark:text-gray-400'
-                    }`}>
+                    <h3
+                      className={`text-lg font-bold mb-2 ${
+                        achievement.earned
+                          ? "text-gray-900 dark:text-white"
+                          : "text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
                       {achievement.title}
                     </h3>
-                    <p className={`text-sm mb-4 ${
-                      achievement.earned 
-                        ? 'text-gray-600 dark:text-gray-300' 
-                        : 'text-gray-400 dark:text-gray-500'
-                    }`}>
+                    <p
+                      className={`text-sm mb-4 ${
+                        achievement.earned
+                          ? "text-gray-600 dark:text-gray-300"
+                          : "text-gray-400 dark:text-gray-500"
+                      }`}
+                    >
                       {achievement.description}
                     </p>
-                    
+
                     {achievement.earned ? (
                       <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
                         Earned {achievement.date}
@@ -482,7 +723,7 @@ export function MyCortex() {
           </div>
         )}
 
-        {activeTab === 'settings' && (
+        {activeTab === "settings" && (
           <div className="max-w-4xl mx-auto space-y-8">
             {/* Profile Settings */}
             <Card className="p-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
@@ -525,7 +766,8 @@ export function MyCortex() {
                   <div key={key} className="flex items-center justify-between">
                     <div>
                       <h3 className="font-medium text-gray-900 dark:text-white">
-                        {key.charAt(0).toUpperCase() + key.slice(1)} Notifications
+                        {key.charAt(0).toUpperCase() + key.slice(1)}{" "}
+                        Notifications
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-300">
                         Receive {key} notifications about your learning progress
@@ -533,8 +775,11 @@ export function MyCortex() {
                     </div>
                     <Switch
                       checked={value}
-                      onCheckedChange={(checked) => 
-                        setNotifications(prev => ({ ...prev, [key]: checked }))
+                      onCheckedChange={(checked) =>
+                        setNotifications((prev) => ({
+                          ...prev,
+                          [key]: checked,
+                        }))
                       }
                     />
                   </div>
@@ -560,7 +805,7 @@ export function MyCortex() {
                     <option>Mixed</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Daily Learning Goal (hours)
@@ -590,7 +835,10 @@ export function MyCortex() {
                 <Button variant="outline" className="w-full justify-start">
                   Download My Data
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-red-600 hover:text-red-700"
+                >
                   Delete Account
                 </Button>
               </div>

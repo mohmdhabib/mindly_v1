@@ -26,6 +26,13 @@ import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 import { generateResponse } from '@/lib/ai';
 import { smes, SMEKey } from '@/lib/sme';
+import { getConversations, getConversation, createConversation, updateConversation } from '@/lib/services';
+
+interface Conversation {
+  id: string;
+  title: string;
+  updated_at: string;
+}
 
 interface Message {
   id: string;
@@ -46,14 +53,16 @@ interface Message {
 const initialMessage: Message = {
     id: '1',
     type: 'sme',
-    content: "Hello! I'm Professor Newton, your Mathematics SME. I'm here to help you understand any math concept, from basic arithmetic to advanced calculus. What would you like to learn today?",
+    content: "learn any topic in depth with Mindly Academy's expert SMEs.",
     timestamp: new Date(Date.now() - 300000),
     sme: {
-      name: 'Professor Newton',
-      subject: 'Mathematics',
-      avatar: 'PN'
+      name: 'MINDLY',
+      subject: 'Mindly Academy',
+      avatar: 'MY'
     }
   };
+
+  
 
 export function Mindspace() {
   const [messages, setMessages] = useState<Message[]>([initialMessage]);
@@ -61,22 +70,25 @@ export function Mindspace() {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedSMEKey, setSelectedSMEKey] = useState<SMEKey>('math');
   const [sessionTime, setSessionTime] = useState(0);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const suggestionChips = [
-    "Explain quadratic equations",
-    "Help with calculus derivatives",
-    "Solve this math problem",
-    "What is integration?"
-  ];
+  const suggestionChips = smes[selectedSMEKey].suggestions;
 
   useEffect(() => {
     const timer = setInterval(() => {
       setSessionTime(prev => prev + 1);
     }, 1000);
+    fetchConversations();
     return () => clearInterval(timer);
   }, []);
+
+  const fetchConversations = async () => {
+    const data = await getConversations();
+    setConversations(data);
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -132,7 +144,43 @@ export function Mindspace() {
     };
     setMessages(prev => [...prev, smeResponse]);
     setIsTyping(false);
+
+    // Store conversation
+    const updatedMessages = [...messages, userMessage, smeResponse];
+    if (currentConversationId) {
+      await updateConversation(currentConversationId, updatedMessages);
+    } else {
+      const data = await createConversation(selectedSMEKey, currentMessage.substring(0, 20), updatedMessages);
+      if (data) {
+        setCurrentConversationId(data.id);
+      }
+    }
+    fetchConversations();
   };
+
+  const handleSelectConversation = async (conversationId: string) => {
+    const data = await getConversation(conversationId);
+    if (data) {
+      const loadedMessages = data.messages as unknown as Message[];
+      if (Array.isArray(loadedMessages)) {
+        const messagesWithDates = loadedMessages.map(msg => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(messagesWithDates);
+      } else {
+        setMessages([]);
+      }
+      setSelectedSMEKey(data.sme_type as SMEKey);
+      setCurrentConversationId(conversationId);
+    }
+  };
+
+  const handleNewChat = () => {
+    setMessages([initialMessage]);
+    setCurrentConversationId(null);
+    setCurrentMessage('');
+  }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -146,11 +194,11 @@ export function Mindspace() {
   };
 
   return (
-    <div className="min-h-screen bg-mindly-bg dark:bg-gray-900 flex">
+    <div className="min-h-screen flex">
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/20 dark:border-gray-700/20 p-4">
+        <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/20 dark:border-gray-700/20 p-4 pt-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               {/* SME Selector */}
@@ -322,7 +370,7 @@ export function Mindspace() {
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200/20 dark:border-gray-700/20 p-4">
           {/* Suggestion Chips */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {suggestionChips.map((suggestion, index) => (
+            {smes[selectedSMEKey].suggestions.map((suggestion, index) => (
               <Button
                 key={index}
                 variant="outline"
@@ -382,15 +430,28 @@ export function Mindspace() {
 
       {/* Sidebar */}
       <div className="w-80 bg-white/50 dark:bg-gray-900/50 backdrop-blur-lg border-l border-gray-200/20 dark:border-gray-700/20 p-4 hidden lg:block">
-        <div className="space-y-6">
-          {/* Conversation History */}
+        <div className="sticky top-0 max-h-screen overflow-y-auto">
+          {/* Recent Conversations */}
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Recent Conversations</h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Recent Conversations</h3>
+              <Button variant="ghost" size="sm" onClick={handleNewChat}>New Chat</Button>
+            </div>
             <div className="space-y-2">
-              {['Quadratic Equations', 'Calculus Basics', 'Linear Algebra'].map((topic, index) => (
-                <div key={index} className="p-3 rounded-lg bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-colors">
-                  <div className="font-medium text-sm text-gray-900 dark:text-white">{topic}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</div>
+              {conversations.map((convo) => (
+                <div
+                  key={convo.id}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                    currentConversationId === convo.id
+                      ? 'bg-mindly-primary/20 dark:bg-mindly-primary/30'
+                      : 'bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800'
+                  }`}
+                  onClick={() => handleSelectConversation(convo.id)}
+                >
+                  <div className="font-medium text-sm text-gray-900 dark:text-white">{convo.title}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(convo.updated_at).toLocaleTimeString()}
+                  </div>
                 </div>
               ))}
             </div>

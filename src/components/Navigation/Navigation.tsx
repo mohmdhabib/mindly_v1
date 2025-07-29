@@ -6,7 +6,6 @@ import {
   Rocket,
   Search,
   Users,
- 
   User,
   Menu,
   X,
@@ -17,6 +16,11 @@ import {
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/components/AuthWrapper";
 
+/**
+ * Navigation component for the application.
+ *
+ * @returns {JSX.Element} The rendered Navigation component.
+ */
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -49,13 +53,13 @@ export function Navigation() {
     try {
       // Use the signOut function from auth context
       await signOut();
-      
+
       // Close mobile menu if open
       setIsMenuOpen(false);
 
       // Navigate to login page
       navigate("/login");
-      
+
       console.log("User logged out successfully");
     } catch (error) {
       console.error("Error logging out:", error);
@@ -63,6 +67,19 @@ export function Navigation() {
   };
 
   const isActive = (path: string) => location.pathname === path;
+
+  const notifications = [
+    {
+      id: 1,
+      message: "New reply on your post 'How to improve my prompting skills?'",
+      timestamp: "2 minutes ago",
+    },
+    {
+      id: 2,
+      message: "@user456 mentioned you in a comment.",
+      timestamp: "1 hour ago",
+    },
+  ];
 
   return (
     <nav

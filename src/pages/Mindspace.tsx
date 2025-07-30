@@ -81,7 +81,6 @@ export function Mindspace() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
-  const [documents, setDocuments] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -135,24 +134,21 @@ export function Mindspace() {
       content: msg.content,
     }));
 
-    // Use Supabase vector search after PDF is processed and inserted
-    let context = '';
-    let results: Array<any> = [];
-    if (selectedDocument) {
-      const embeddings = new GoogleGenerativeAIEmbeddings({
-        apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
-        model: 'embedding-001',
-      });
-      const vectorStore = new SupabaseVectorStore(embeddings, {
-        client: supabase,
-        tableName: 'documents',
-        queryName: 'match_documents',
-      });
-      results = await vectorStore.similaritySearch(currentMessage, 1, {
-        documentId: selectedDocument,
-      });
-      context = results.map((res) => res.pageContent).join('\n');
-    }
+    const embeddings = new GoogleGenerativeAIEmbeddings({
+      apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+      model: 'embedding-001',
+    });
+
+    const vectorStore = new SupabaseVectorStore(embeddings, {
+      client: supabase,
+      tableName: 'documents',
+      queryName: 'match_documents',
+    });
+
+    const results = await vectorStore.similaritySearch(currentMessage, 1, {
+      documentId: selectedDocument,
+    });
+    const context = results.map((res) => res.pageContent).join('\n');
 
     const response = await generateResponse(
       currentMessage,
@@ -229,24 +225,6 @@ export function Mindspace() {
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
   };
-
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      const { data, error } = await supabase.storage.from('documents').list('public');
-      if (error) {
-        console.error('Error fetching documents:', error);
-      } else {
-        setDocuments(
-          data.map(file => ({
-            id: file.id || file.name,
-            name: file.name,
-            url: supabase.storage.from('documents').getPublicUrl(`public/${file.name}`).data.publicUrl,
-          }))
-        );
-      }
-    };
-    fetchDocuments();
-  }, []);
 
   return (
     <div className="min-h-screen flex">
@@ -462,27 +440,7 @@ export function Mindspace() {
               }}
             />
             <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-              <DocumentUploader onUpload={async (file, url) => {
-                // Send PDF and URL to Flask backend for processing
-                const formData = new FormData();
-                formData.append('file', file as File);
-                formData.append('url', url as string);
-                await fetch('http://localhost:5000/process-pdf', {
-                  method: 'POST',
-                  body: formData,
-                });
-                // Refresh documents list after processing
-                const { data, error } = await supabase.storage.from('documents').list('public');
-                if (!error) {
-                  setDocuments(
-                    data.map((file: any) => ({
-                      id: file.id || file.name,
-                      name: file.name,
-                      url: supabase.storage.from('documents').getPublicUrl(`public/${file.name}`).data.publicUrl,
-                    }))
-                  );
-                }
-              }} />
+              <DocumentUploader />
               <Button
                 variant="ghost"
                 size="sm"

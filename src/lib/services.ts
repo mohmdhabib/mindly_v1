@@ -127,3 +127,18 @@ export const updateConversation = async (conversationId: string, messages: any[]
     }
     return data;
 }
+
+export const uploadFile = async (file: File) => {
+    const { data, error } = await supabase.storage
+        .from('documents')
+        .upload(`public/${file.name}`, file, {
+            cacheControl: '3600',
+            upsert: false,
+        });
+
+    if (error) {
+        console.error('Error uploading file:', error);
+        return null;
+    }
+    return data;
+}

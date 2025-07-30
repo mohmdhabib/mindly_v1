@@ -1,4 +1,8 @@
 import { useState } from 'react';
+
+interface DocumentUploaderProps {
+  onUpload?: (file: File, url: string) => void;
+}
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import {
@@ -12,7 +16,7 @@ import {
 import { Paperclip } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-export function DocumentUploader() {
+export function DocumentUploader({ onUpload }: DocumentUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -46,6 +50,11 @@ export function DocumentUploader() {
         description: data.path,
       });
       setIsOpen(false);
+      // Get public URL and call onUpload
+      const publicUrl = supabase.storage.from('documents').getPublicUrl(`public/${file.name}`).data.publicUrl;
+      if (onUpload) {
+        onUpload(file, publicUrl);
+      }
     }
   };
 

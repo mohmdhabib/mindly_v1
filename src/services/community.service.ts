@@ -30,6 +30,7 @@ export const CommunityService = {
           avatar_url
         )
       `)
+      .is('group_id', null)
       .order('created_at', { ascending: false });
 
     return { data: data as Post[], error };

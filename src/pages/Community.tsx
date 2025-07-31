@@ -36,11 +36,12 @@ import {
 import { CommunityService, Post, StudyGroup, Comment } from '@/services/community.service';
 import { useAuth } from '@/components/AuthWrapper';
 import { formatDistanceToNow } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 export function Community() {
   const { session } = useAuth();
-  const [activeTab, setActiveTab] = useState('feed');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'feed';
   const [posts, setPosts] = useState<Post[]>([]);
   const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([]);
   const [forumQuestions, setForumQuestions] = useState<Post[]>([]);
@@ -172,7 +173,7 @@ export function Community() {
                     ? 'bg-mindly-primary text-white shadow-md'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                 }`}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => setSearchParams({ tab: tab.id })}
               >
                 <tab.icon className="w-4 h-4 mr-2" />
                 {tab.label}

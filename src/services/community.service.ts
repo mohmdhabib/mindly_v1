@@ -10,6 +10,7 @@ export type Post = {
   likes_count: number;
   comments_count: number;
   votes: number;
+  group_id: string | null;
   is_pinned: boolean;
   created_at: string;
   profiles: {
@@ -153,6 +154,26 @@ export const CommunityService = {
 
   async createComment(comment: { postId: string; userId: string; content: string }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
     return supabase.from('post_interactions').insert([{ post_id: comment.postId, user_id: comment.userId, comment_content: comment.content, interaction_type: 'comment' }]).select();
+  },
+
+  async getPostsForGroup(groupId: string): Promise<{ data: Post[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        profiles (
+          username,
+          avatar_url
+        )
+      `)
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: false });
+
+    return { data: data as Post[], error };
+  },
+
+  async createPostInGroup(post: { userId: string, groupId: string, content: string }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    return supabase.from('posts').insert([{ user_id: post.userId, group_id: post.groupId, content: post.content, post_type: 'text' }]).select();
   }
 };
 

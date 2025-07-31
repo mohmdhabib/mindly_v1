@@ -15,6 +15,7 @@ import { Community } from '@/pages/Community';
 import { Pathways } from '@/pages/Pathways';
 import { MyCortex } from '@/pages/MyCortex';
 import { Login } from './pages/Login';
+import { GroupSpace } from './pages/GroupSpace';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
                   <Route path="/arena" element={<Arena />} />
                   <Route path="/arena/challenge/:challengeId" element={<StartChallenge />} />
                   <Route path="/community" element={<Community />} />
+                  <Route path="/group/:groupId" element={<GroupSpace />} />
                   <Route path="/pathways" element={<Pathways />} />
                   <Route path="/my-cortex" element={<MyCortex />} />
                 </Route>

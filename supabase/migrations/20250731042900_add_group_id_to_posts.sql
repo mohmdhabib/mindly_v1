@@ -1,0 +1,2 @@
+ALTER TABLE posts
+ADD COLUMN group_id UUID REFERENCES study_groups(id) ON DELETE CASCADE;

@@ -36,6 +36,7 @@ import {
 import { CommunityService, Post, StudyGroup, Comment } from '@/services/community.service';
 import { useAuth } from '@/components/AuthWrapper';
 import { formatDistanceToNow } from 'date-fns';
+import { Link } from 'react-router-dom';
 
 export function Community() {
   const { session } = useAuth();
@@ -365,13 +366,21 @@ export function Community() {
                         <span>{group.group_memberships.length} members</span>
                       </div>
                     </div>
-                    <Button
-                      className="w-full bg-mindly-primary hover:bg-mindly-primary/90"
-                      onClick={() => handleJoinGroup(group.id)}
-                      disabled={!session || group.group_memberships.some(m => m.user_id === session.user.id)}
-                    >
-                      {group.group_memberships.some(m => m.user_id === session?.user.id) ? 'Joined' : 'Join Group'}
-                    </Button>
+                    {group.group_memberships.some(m => m.user_id === session?.user.id) ? (
+                      <Link to={`/group/${group.id}`} className="w-full">
+                        <Button className="w-full bg-mindly-accent hover:bg-mindly-accent/90">
+                          View Group
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button
+                        className="w-full bg-mindly-primary hover:bg-mindly-primary/90"
+                        onClick={() => handleJoinGroup(group.id)}
+                        disabled={!session}
+                      >
+                        Join Group
+                      </Button>
+                    )}
                   </Card>
                 ))}
               </div>

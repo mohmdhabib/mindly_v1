@@ -88,11 +88,80 @@ export function GroupSpace() {
       </div>
 
       {activeTab === 'feed' && (
-        // ... feed content ...
+        <div>
+          <h1 className="text-2xl font-bold mb-4">Group Feed</h1>
+          <Card className="p-4 mb-6">
+            <div className="flex items-start space-x-4">
+              <Avatar>
+                <AvatarFallback>{session?.user?.email?.[0].toUpperCase() || 'U'}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <Textarea
+                  placeholder="Post to the group..."
+                  value={newPost}
+                  onChange={(e) => setNewPost(e.target.value)}
+                  disabled={!session}
+                />
+                <div className="flex justify-end mt-2">
+                  <Button onClick={handleCreatePost} disabled={!newPost.trim() || !session}>
+                    Post
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+          {loading ? <p>Loading posts...</p> : (
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <Card key={post.id} className="p-4">
+                  <div className="flex items-start space-x-4">
+                    <Avatar>
+                      <AvatarFallback>{post.profiles?.username?.[0].toUpperCase() || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <p className="font-semibold">{post.profiles?.username || 'Anonymous'}</p>
+                        <p className="text-sm text-gray-500">
+                          {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                      <p>{post.content}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {activeTab === 'files' && (
-        // ... files content ...
+        <div>
+          <h1 className="text-2xl font-bold mb-4">Shared Files</h1>
+          <Card className="p-4 mb-6">
+            <h2 className="text-lg font-semibold mb-2">Upload a new file</h2>
+            <div className="flex items-center space-x-2">
+              <Input type="file" onChange={handleFileChange} />
+              <Button onClick={handleFileUpload} disabled={!selectedFile || !session}>Upload</Button>
+            </div>
+          </Card>
+          {loading ? <p>Loading files...</p> : (
+            <div className="space-y-2">
+              {groupFiles.map((file) => (
+                <Card key={file.id} className="p-3 flex justify-between items-center">
+                  <div>
+                    <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      {file.file_name}
+                    </a>
+                    <p className="text-sm text-gray-500">
+                      Uploaded by {file.profiles?.username || 'Anonymous'} on {new Date(file.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {activeTab === 'calendar' && (

@@ -235,6 +235,21 @@ export const CommunityService = {
       start_time: event.startTime.toISOString(),
       end_time: event.endTime?.toISOString()
     }]).select();
+  },
+
+  async getGroupMembers(groupId: string): Promise<{ data: GroupMember[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('group_memberships')
+      .select(`
+        user_id,
+        profiles (
+          username,
+          avatar_url
+        )
+      `)
+      .eq('group_id', groupId);
+
+    return { data: data as GroupMember[], error };
   }
 };
 
@@ -273,6 +288,14 @@ export type GroupFile = {
     created_at: string;
     profiles: {
         username: string;
+    } | null;
+};
+
+export type GroupMember = {
+    user_id: string;
+    profiles: {
+        username: string;
+        avatar_url: string;
     } | null;
 };
 

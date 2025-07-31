@@ -67,13 +67,36 @@ export const CommunityService = {
     return { data, error };
   },
 
-  async createStudyGroup(group: { name: string; description: string; subject: string; creator_id: string }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+  async createStudyGroup(group: { name: string; description: string; subject: string; creator_id: string; avatar_url?: string; banner_url?: string; }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
     const { data, error } = await supabase
       .from('study_groups')
       .insert([group])
       .select();
 
     return { data, error };
+  },
+
+  async updateGroupImages(groupId: string, avatarFile: File | null, bannerFile: File | null): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    let avatar_url = null;
+    let banner_url = null;
+
+    if (avatarFile) {
+      const { data, error } = await supabase.storage.from('group-avatars').upload(`${groupId}/${avatarFile.name}`, avatarFile, { upsert: true });
+      if (error) return { data: null, error };
+      avatar_url = supabase.storage.from('group-avatars').getPublicUrl(data.path).data.publicUrl;
+    }
+
+    if (bannerFile) {
+      const { data, error } = await supabase.storage.from('group-banners').upload(`${groupId}/${bannerFile.name}`, bannerFile, { upsert: true });
+      if (error) return { data: null, error };
+      banner_url = supabase.storage.from('group-banners').getPublicUrl(data.path).data.publicUrl;
+    }
+
+    const updates: { avatar_url?: string; banner_url?: string } = {};
+    if (avatar_url) updates.avatar_url = avatar_url;
+    if (banner_url) updates.banner_url = banner_url;
+
+    return supabase.from('study_groups').update(updates).eq('id', groupId).select();
   },
 
   async joinStudyGroup(membership: { group_id: string; user_id: string }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
@@ -261,6 +284,8 @@ export type StudyGroup = {
   creator_id: string;
   max_members: number;
   is_private: boolean;
+  avatar_url: string | null;
+  banner_url: string | null;
   join_code: string | null;
   created_at: string;
   group_memberships: { user_id: string }[];

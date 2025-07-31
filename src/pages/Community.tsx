@@ -56,7 +56,7 @@ export function Community() {
     setNewQuestion,
     setNewComment,
     handleCreatePost,
-    handleCreateGroup,
+    handleCreateGroup: originalHandleCreateGroup,
     handleJoinGroup,
     handleCreateQuestion,
     handleVote,
@@ -64,6 +64,22 @@ export function Community() {
     handleComment,
     toggleComments,
   } = useCommunityData();
+
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+
+  const handleCreateGroup = async () => {
+    const groupData = await originalHandleCreateGroup();
+    if (groupData && (avatarFile || bannerFile)) {
+      await handleUpdateGroupImages(groupData.id, avatarFile, bannerFile);
+    }
+  };
+
+  const handleUpdateGroupImages = async (groupId: string, avatar: File | null, banner: File | null) => {
+    // This function should be in the hook, but for now we'll call the service directly
+    // to avoid re-implementing the whole hook again.
+    await CommunityService.updateGroupImages(groupId, avatar, banner);
+  };
 
   return (
     <div className="min-h-screen bg-mindly-bg dark:bg-gray-900 py-8">
@@ -259,6 +275,18 @@ export function Community() {
                         Description
                       </Label>
                       <Textarea id="description" value={newGroup.description} onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="avatar" className="text-right">
+                        Avatar
+                      </Label>
+                      <Input id="avatar" type="file" onChange={(e) => setAvatarFile(e.target.files?.[0] || null)} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="banner" className="text-right">
+                        Banner
+                      </Label>
+                      <Input id="banner" type="file" onChange={(e) => setBannerFile(e.target.files?.[0] || null)} className="col-span-3" />
                     </div>
                   </div>
                   <DialogFooter>

@@ -9,6 +9,7 @@ export type Post = {
   post_type: 'text' | 'question' | 'resource' | 'achievement';
   likes_count: number;
   comments_count: number;
+  votes: number;
   is_pinned: boolean;
   created_at: string;
   profiles: {
@@ -47,4 +48,136 @@ export const CommunityService = {
 
     return { data, error };
   },
+
+  async getStudyGroups(): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('study_groups')
+      .select(`
+        *,
+        group_memberships (
+          user_id
+        ),
+        profiles (
+          username
+        )
+      `);
+
+    return { data, error };
+  },
+
+  async createStudyGroup(group: { name: string; description: string; subject: string; creator_id: string }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('study_groups')
+      .insert([group])
+      .select();
+
+    return { data, error };
+  },
+
+  async joinStudyGroup(membership: { group_id: string; user_id: string }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('group_memberships')
+      .insert([membership])
+      .select();
+
+    return { data, error };
+  },
+
+  async getForumQuestions(): Promise<{ data: Post[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        profiles (
+          username,
+          avatar_url
+        )
+      `)
+      .eq('post_type', 'question')
+      .order('created_at', { ascending: false });
+
+    return { data: data as Post[], error };
+  },
+
+  async createForumQuestion(question: { user_id: string; content: string; subject?: string }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('posts')
+      .insert([
+        {
+          user_id: question.user_id,
+          content: question.content,
+          subject: question.subject,
+          post_type: 'question',
+        },
+      ])
+      .select();
+
+    return { data, error };
+  },
+
+  async voteOnForumQuestion(postId: string, currentVotes: number, direction: 'up' | 'down'): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    const newVotes = direction === 'up' ? currentVotes + 1 : currentVotes - 1;
+    const { data, error } = await supabase
+      .from('posts')
+      .update({ votes: newVotes })
+      .eq('id', postId)
+      .select();
+
+    return { data, error };
+  },
+
+  async likePost(postId: string, userId: string): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    return supabase.from('post_interactions').insert([{ post_id: postId, user_id: userId, interaction_type: 'like' }]).select();
+  },
+
+  async unlikePost(postId: string, userId: string): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    return supabase.from('post_interactions').delete().match({ post_id: postId, user_id: userId, interaction_type: 'like' }).select();
+  },
+
+  async getCommentsForPost(postId: string): Promise<{ data: Comment[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('post_interactions')
+      .select(`
+        *,
+        profiles (
+          username,
+          avatar_url
+        )
+      `)
+      .eq('post_id', postId)
+      .eq('interaction_type', 'comment')
+      .order('created_at', { ascending: true });
+
+    return { data: data as Comment[], error };
+  },
+
+  async createComment(comment: { postId: string; userId: string; content: string }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    return supabase.from('post_interactions').insert([{ post_id: comment.postId, user_id: comment.userId, comment_content: comment.content, interaction_type: 'comment' }]).select();
+  }
+};
+
+export type StudyGroup = {
+  id: string;
+  name: string;
+  description: string;
+  subject: string;
+  creator_id: string;
+  max_members: number;
+  is_private: boolean;
+  join_code: string | null;
+  created_at: string;
+  group_memberships: { user_id: string }[];
+  profiles: { username: string } | null;
+};
+
+export type Comment = {
+    id: string;
+    post_id: string;
+    user_id: string;
+    comment_content: string;
+    created_at: string;
+    profiles: {
+        username: string;
+        avatar_url: string;
+    } | null;
 };

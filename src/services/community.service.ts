@@ -175,6 +175,41 @@ export const CommunityService = {
 
   async createPostInGroup(post: { userId: string, groupId: string, content: string }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
     return supabase.from('posts').insert([{ user_id: post.userId, group_id: post.groupId, content: post.content, post_type: 'text' }]).select();
+  },
+
+  async getGroupFiles(groupId: string): Promise<{ data: GroupFile[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('group_files')
+      .select(`
+        *,
+        profiles (
+          username
+        )
+      `)
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: false });
+
+    return { data: data as GroupFile[], error };
+  },
+
+  async uploadGroupFile(file: File, groupId: string, userId: string): Promise<{ error: Error | null }> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${groupId}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage.from('group-files').upload(filePath, file);
+
+    if (uploadError) {
+      return { error: uploadError };
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('group-files').getPublicUrl(filePath);
+
+    const { error: dbError } = await supabase
+      .from('group_files')
+      .insert([{ group_id: groupId, user_id: userId, file_name: file.name, file_url: publicUrl }]);
+
+    return { error: dbError };
   }
 };
 
@@ -203,3 +238,15 @@ export type Comment = {
         avatar_url: string;
     } | null;
 };
+
+export type GroupFile = {
+    id: string;
+    group_id: string;
+    user_id: string;
+    file_name: string;
+    file_url: string;
+    created_at: string;
+    profiles: {
+        username: string;
+    } | null;
+}

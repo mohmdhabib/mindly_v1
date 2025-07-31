@@ -210,6 +210,31 @@ export const CommunityService = {
       .insert([{ group_id: groupId, user_id: userId, file_name: file.name, file_url: publicUrl }]);
 
     return { error: dbError };
+  },
+
+  async getGroupEvents(groupId: string): Promise<{ data: GroupEvent[] | null, error: PostgrestError | null }> {
+    const { data, error } = await supabase
+      .from('group_events')
+      .select(`
+        *,
+        profiles (
+          username
+        )
+      `)
+      .eq('group_id', groupId)
+      .order('start_time', { ascending: true });
+
+    return { data: data as GroupEvent[], error };
+  },
+
+  async createGroupEvent(event: { groupId: string; userId: string; title: string; startTime: Date; endTime: Date | null }): Promise<{ data: any[] | null, error: PostgrestError | null }> {
+    return supabase.from('group_events').insert([{
+      group_id: event.groupId,
+      user_id: event.userId,
+      title: event.title,
+      start_time: event.startTime.toISOString(),
+      end_time: event.endTime?.toISOString()
+    }]).select();
   }
 };
 
@@ -249,4 +274,17 @@ export type GroupFile = {
     profiles: {
         username: string;
     } | null;
-}
+};
+
+export type GroupEvent = {
+    id: string;
+    group_id: string;
+    user_id: string;
+    title: string;
+    start_time: string;
+    end_time: string | null;
+    created_at: string;
+    profiles: {
+        username: string;
+    } | null;
+};

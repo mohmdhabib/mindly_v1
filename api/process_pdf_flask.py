@@ -87,6 +87,21 @@ def process_pdf():
         print('Error processing PDF:', e)
         return jsonify({'error': str(e)}), 500
 
+@app.route('/get-embedding', methods=['POST'])
+def get_embedding():
+    data = request.get_json()
+    text = data.get('text')
+    
+    if not text:
+        return jsonify({'error': 'Missing text'}), 400
+    
+    try:
+        embedding = model.encode([text])[0].tolist()
+        return jsonify({'embedding': embedding})
+    except Exception as e:
+        print('Error getting embedding:', e)
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/chat-with-pdf', methods=['POST'])
 def chat_with_pdf():
     data = request.get_json()

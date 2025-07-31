@@ -22,8 +22,11 @@ import {
 } from 'lucide-react';
 import { DocumentUploader } from '@/components/DocumentUploader/DocumentUploader';
 import { DocumentList } from '@/components/DocumentList/DocumentList';
+
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { generateResponse } from '@/lib/ai';
 import { smes, SMEKey } from '@/lib/sme';
@@ -134,21 +137,23 @@ export function Mindspace() {
       content: msg.content,
     }));
 
-    const embeddings = new GoogleGenerativeAIEmbeddings({
-      apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
-      model: 'embedding-001',
-    });
-
-    const vectorStore = new SupabaseVectorStore(embeddings, {
-      client: supabase,
-      tableName: 'documents',
-      queryName: 'match_documents',
-    });
-
-    const results = await vectorStore.similaritySearch(currentMessage, 1, {
-      documentId: selectedDocument,
-    });
-    const context = results.map((res) => res.pageContent).join('\n');
+    let context = '';
+    let results: any[] = [];
+    if (selectedDocument) {
+      const embeddings = new GoogleGenerativeAIEmbeddings({
+        apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+        model: 'embedding-001',
+      });
+      const vectorStore = new SupabaseVectorStore(embeddings, {
+        client: supabase,
+        tableName: 'documents',
+        queryName: 'match_documents',
+      });
+      results = await vectorStore.similaritySearch(currentMessage, 1, {
+        documentId: selectedDocument,
+      });
+      context = results.map((res) => res.pageContent).join('\n');
+    }
 
     const response = await generateResponse(
       currentMessage,
@@ -168,7 +173,7 @@ export function Mindspace() {
         avatar: sme.name.substring(0, 2).toUpperCase(),
       },
       source:
-        results.length > 0
+        selectedDocument && results.length > 0
           ? {
               name: results[0].metadata.name as string,
               url: results[0].metadata.url as string,
@@ -326,7 +331,9 @@ export function Mindspace() {
                       : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200/50 dark:border-gray-700/50'
                   }`}
                 >
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <div className="text-sm leading-relaxed">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                  </div>
                   
                   {message.codeBlock && (
                     <div className="mt-3 rounded-lg overflow-hidden">

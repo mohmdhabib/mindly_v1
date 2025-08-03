@@ -3,7 +3,7 @@ import { useAuth } from "@/components/AuthWrapper";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Fire } from "lucide-react";
+import { Flame } from "lucide-react";
 
 export const ArenaHeader = () => {
   const { session } = useAuth();
@@ -39,7 +39,7 @@ export const ArenaHeader = () => {
             <div className="grid grid-cols-3 gap-8 text-center">
               <div className="group"><div className="text-3xl font-black text-yellow-600 group-hover:scale-110 transition-transform duration-200">{userStats.xp.toLocaleString()}</div><div className="text-sm text-slate-600 dark:text-slate-400 font-medium">Total XP</div></div>
               <div className="group"><div className="text-3xl font-black text-green-600 group-hover:scale-110 transition-transform duration-200">{userStats.winRate}%</div><div className="text-sm text-slate-600 dark:text-slate-400 font-medium">Win Rate</div></div>
-              <div className="group"><div className="flex items-center justify-center space-x-2 group-hover:scale-110 transition-transform duration-200"><Fire className="w-6 h-6 text-orange-500 animate-pulse" /><span className="text-3xl font-black text-orange-600">{userStats.streak}</span></div><div className="text-sm text-slate-600 dark:text-slate-400 font-medium">Day Streak</div></div>
+              <div className="group"><div className="flex items-center justify-center space-x-2 group-hover:scale-110 transition-transform duration-200"><Flame className="w-6 h-6 text-orange-500 animate-pulse" /><span className="text-3xl font-black text-orange-600">{userStats.streak}</span></div><div className="text-sm text-slate-600 dark:text-slate-400 font-medium">Day Streak</div></div>
             </div>
           </div>
           <div className="flex items-center space-x-4">

@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Crown, Medal, Star } from "lucide-react";
-import { Fire } from "lucide-react";
+import { Flame } from "lucide-react";
 
 const leaderboard = [
     { rank: 1, name: "Alex Chen", xp: 15420, avatar: "AC", badge: "crown", winStreak: 12 },
@@ -43,7 +43,7 @@ export const LeaderboardTab = () => {
                                 </div>
                                 <div className="text-center">
                                     <div className="flex items-center space-x-1">
-                                        <Fire className="w-4 h-4 text-orange-500" />
+                                        <Flame className="w-4 h-4 text-orange-500" />
                                         <span className="text-lg font-black text-orange-600">{user.winStreak}</span>
                                     </div>
                                     <div className="text-xs text-gray-500 dark:text-gray-400">streak</div>

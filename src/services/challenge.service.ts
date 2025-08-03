@@ -47,11 +47,16 @@ export const ChallengeService = {
         return { data: null, error };
       }
 
-      // Format the participant count
-      const formattedData = data?.map((challenge) => ({
-        ...challenge,
-        participant_count: challenge.participant_count[0]?.count || 0,
-      }));
+      // The count is returned as a single value in a related object, not an array
+      const formattedData = data?.map((challenge) => {
+        const count = Array.isArray(challenge.participant_count) && challenge.participant_count.length > 0
+          ? challenge.participant_count[0].count
+          : 0;
+        return {
+          ...challenge,
+          participant_count: count,
+        };
+      });
 
       return { data: formattedData, error: null };
     } catch (err) {
@@ -79,10 +84,14 @@ export const ChallengeService = {
         return { data: null, error };
       }
 
-      // Format the participant count
+      // The count is returned as a single value in a related object, not an array
+      const count = Array.isArray(data.participant_count) && data.participant_count.length > 0
+        ? data.participant_count[0].count
+        : 0;
+
       const formattedData = {
         ...data,
-        participant_count: data.participant_count[0]?.count || 0,
+        participant_count: count,
       };
 
       return { data: formattedData, error: null };

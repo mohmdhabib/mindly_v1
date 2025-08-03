@@ -212,14 +212,11 @@ class QuizAPIService {
     const apiDifficulty = difficulty === 'very hard' ? 'hard' : difficulty;
     try {
       const category = this.categoryMap[subject];
-      let url = `${this.baseUrl}?amount=${amount}&type=multiple`;
+      let url = `${this.baseUrl}?amount=${amount}&type=multiple&difficulty=${apiDifficulty}`;
       
       if (category) {
         url += `&category=${category}`;
       }
-      
-      const apiDifficulty = difficulty === 'very hard' ? 'hard' : difficulty;
-      url += `&difficulty=${apiDifficulty}`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -346,22 +343,22 @@ export async function getQuestions(
   difficulty: Difficulty,
   count: number
 ): Promise<QuizQuestion[]> {
+  // This function is now a wrapper around the QuizAPIService methods
+  // to maintain backward compatibility while centralizing the logic.
+
   try {
-    // First try to get questions from the API
-    const apiQuestions = await quizAPI.fetchQuestionsFromAPI(subject, difficulty, count);
+    const questions = await quizAPI.fetchQuestionsFromAPI(subject, difficulty, count);
     
-    if (apiQuestions.length >= count) {
-      return apiQuestions;
+    if (questions.length < count) {
+      console.warn(`API returned only ${questions.length} of ${count} requested questions. Filling with fallback questions.`);
+      const fallbackNeeded = count - questions.length;
+      const fallbackQuestions = quizAPI.getFallbackQuestions(subject, difficulty, fallbackNeeded);
+      return [...questions, ...fallbackQuestions];
     }
     
-    // If API didn't return enough questions, use fallback
-    console.warn(`API returned only ${apiQuestions.length} questions, using fallback for remaining`);
-    const fallback = quizAPI.getFallbackQuestions(subject, difficulty, count - apiQuestions.length);
-    
-    return [...apiQuestions, ...fallback];
+    return questions;
   } catch (error) {
-    console.error("Error fetching questions:", error);
-    // Return fallback questions if API fails completely
+    console.error(`API fetch failed for ${subject} (${difficulty}). Using fallback questions.`, error);
     return quizAPI.getFallbackQuestions(subject, difficulty, count);
   }
 }

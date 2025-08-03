@@ -134,7 +134,7 @@ export const QuickBattle = ({ setQuickBattleActive }: QuickBattleProps) => {
 
             setQuickBattleId(challenge.id);
             setQuickBattleCreated(true);
-            setQuickBattleStatus({ isReady: true, participants: [{ profiles: { username: session.user.email?.split("@")[0] } }] });
+            setQuickBattleStatus({ isReady: true, participants: [{ user: { username: session.user.email?.split("@")[0] } }] });
             const { data: leaderboard } = await ChallengeService.getChallengeLeaderboard(challenge.id);
             if (leaderboard) {
                 setQuickBattleStatus({ isReady: true, participants: leaderboard });

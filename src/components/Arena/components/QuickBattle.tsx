@@ -339,10 +339,10 @@ export const QuickBattle = ({ setQuickBattleActive }: QuickBattleProps) => {
                                     <div key={index} className="text-center">
                                         <Avatar className="w-20 h-20 mx-auto mb-4 ring-4 ring-white dark:ring-slate-800 shadow-xl">
                                             <AvatarFallback className={`bg-gradient-to-br ${index === 0 ? "from-blue-400 to-blue-600" : "from-red-400 to-red-600"} text-white font-bold text-2xl`}>
-                                                {participant.profiles.username?.substring(0, 2).toUpperCase() || "P"}
+                                                {participant.user.username?.substring(0, 2).toUpperCase() || "P"}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <div className="font-bold text-lg text-gray-900 dark:text-white">{participant.profiles.username || "Player"}</div>
+                                        <div className="font-bold text-lg text-gray-900 dark:text-white">{participant.user.username || "Player"}</div>
                                     </div>
                                 ))}
                             </div>

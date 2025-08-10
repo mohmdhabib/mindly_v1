@@ -1,38 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react";
-
-const PostCard = ({ post, onVote }) => (
-  <Card className="mb-4">
-    <CardHeader>
-      <CardTitle>{post.title}</CardTitle>
-      <p className="text-sm text-gray-500">Posted by @{post.author}</p>
-    </CardHeader>
-    <CardContent>
-      <p>{post.content}</p>
-      <div className="flex items-center gap-4 mt-4">
-        <Button variant="ghost" size="sm" onClick={() => onVote(post.id, "up")}>
-          <ThumbsUp size={16} className="mr-2" />
-          {post.upvotes}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={() => onVote(post.id, "down")}>
-          <ThumbsDown size={16} className="mr-2" />
-        </Button>
-        <Button variant="ghost" size="sm">
-          <MessageSquare size={16} className="mr-2" />
-          {post.replies.length} Replies
-        </Button>
-      </div>
-    </CardContent>
-  </Card>
-);
+import { PostCard } from "./components/PostCard";
 
 export const DiscussionForum = () => {
   const [posts, setPosts] = useState([
     {
-      id: 1,
+      id: "1",
       title: "How to improve my prompting skills?",
       author: "user123",
       content: "I'm looking for tips and tricks to improve my prompting skills. Any advice?",
@@ -40,7 +14,7 @@ export const DiscussionForum = () => {
       replies: [],
     },
     {
-      id: 2,
+      id: "2",
       title: "Best way to learn about RAG?",
       author: "user456",
       content: "What are the best resources to learn about Retrieval-Augmented Generation?",
@@ -49,7 +23,7 @@ export const DiscussionForum = () => {
     },
   ]);
 
-  const handleVote = (postId, type) => {
+  const handleVote = (postId: string, type: "up" | "down") => {
     setPosts(
       posts.map((post) => {
         if (post.id === postId) {

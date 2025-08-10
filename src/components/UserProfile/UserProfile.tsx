@@ -1,7 +1,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserStats } from "./components/UserStats";
 
-export const UserProfile = ({ user }) => {
+interface User {
+  avatar: string;
+  name: string;
+  email: string;
+  posts: number;
+  replies: number;
+  upvotes: number;
+}
+
+interface UserProfileProps {
+  user: User;
+}
+
+export const UserProfile = ({ user }: UserProfileProps) => {
+  const stats = {
+    posts: user.posts,
+    replies: user.replies,
+    upvotes: user.upvotes,
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -17,12 +37,7 @@ export const UserProfile = ({ user }) => {
         </div>
       </CardHeader>
       <CardContent>
-        <div>
-          <h3 className="font-semibold">Stats</h3>
-          <p>Posts: {user.posts}</p>
-          <p>Replies: {user.replies}</p>
-          <p>Upvotes: {user.upvotes}</p>
-        </div>
+        <UserStats stats={stats} />
       </CardContent>
     </Card>
   );

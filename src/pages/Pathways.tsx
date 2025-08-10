@@ -1,15 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/components/AuthWrapper";
 import { LearningService, LearningPath } from "@/services/learning.service";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,7 +84,6 @@ export function Pathways() {
     topicId: number;
   } | null>(null);
   const [showBlog, setShowBlog] = useState(false);
-  const [pathways, setPathways] = useState<LearningPath[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newPathway, setNewPathway] = useState<LearningPath>({
     title: "",
@@ -108,23 +100,6 @@ export function Pathways() {
   const [prerequisiteInput, setPrerequisiteInput] = useState("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchPathways = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await LearningService.getLearningPaths();
-        if (error) throw error;
-        if (data) setPathways(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch pathways");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPathways();
-  }, []);
-
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -132,7 +107,10 @@ export function Pathways() {
     setNewPathway((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectInputChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
     setNewPathway((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -182,7 +160,6 @@ export function Pathways() {
       }
 
       console.log("Created pathway:", data);
-      setPathways((prev) => [...prev, data]);
       setSuccessMessage("Learning pathway created successfully!");
 
       // Reset form
@@ -1734,7 +1711,7 @@ Common Patterns:
                         id="difficulty_level"
                         name="difficulty_level"
                         value={newPathway.difficulty_level}
-                        onChange={handleInputChange}
+                        onChange={handleSelectInputChange}
                         className="w-full p-2 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700"
                       >
                         <option value="beginner">Beginner</option>

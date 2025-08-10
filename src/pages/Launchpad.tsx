@@ -7,16 +7,11 @@ import {
   Rocket, 
   Target, 
   Clock, 
-  Star, 
-  Play, 
   BookOpen, 
   TrendingUp,
-  Calendar,
   Award,
-  ArrowRight,
-  Plus
+  ArrowRight
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthWrapper';
 import { ProfileService } from '@/services/profile.service'
 import { LearningService } from '@/services/learning.service'

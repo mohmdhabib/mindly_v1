@@ -10,7 +10,21 @@ import { MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react";
  * @param {function} props.onVote - The function to call when a user votes on the post.
  * @returns {JSX.Element} The rendered PostCard component.
  */
-export const PostCard = ({ post, onVote }) => (
+interface Post {
+  id: string;
+  title: string;
+  author: string;
+  content: string;
+  upvotes: number;
+  replies: any[];
+}
+
+interface PostCardProps {
+  post: Post;
+  onVote: (postId: string, voteType: 'up' | 'down') => void;
+}
+
+export const PostCard = ({ post, onVote }: PostCardProps) => (
   <Card className="mb-4">
     <CardHeader>
       <CardTitle>{post.title}</CardTitle>

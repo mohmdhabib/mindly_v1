@@ -97,8 +97,10 @@ export function ChallengeForm({ open, onOpenChange, onChallengeCreated }: Challe
     setIsSubmitting(true);
 
     try {
-      const { data: challenge, error } = await ChallengeService.createChallenge({
+      const { error } = await ChallengeService.createChallenge({
         ...data,
+        start_date: data.start_date.toISOString(),
+        end_date: data.end_date.toISOString(),
         is_active: true,
         created_by: session.user.id,
       });

@@ -208,8 +208,6 @@ class QuizAPIService {
     difficulty: Difficulty,
     amount: number
   ): Promise<QuizQuestion[]> {
-    // Convert 'very hard' to 'hard' for API compatibility
-    const apiDifficulty = difficulty === 'very hard' ? 'hard' : difficulty;
     try {
       const category = this.categoryMap[subject];
       let url = `${this.baseUrl}?amount=${amount}&type=multiple`;

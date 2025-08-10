@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Trophy, Zap, Users, Clock, Star, Sword, Target, Medal, Crown, Siren as Fire, TrendingUp, Calendar, Play, Plus, Loader2, CheckCircle2, XCircle, HelpCircle, User, Bot, ArrowRight, Sparkles, Timer, Award, Activity, BarChart3, Gift } from "lucide-react";
+import { Trophy, Zap, Users, Clock, Star, Sword, Target, Medal, Crown, Siren as Fire, TrendingUp, Play, Plus, Loader2, CheckCircle2, XCircle, HelpCircle, User, Bot, ArrowRight, Sparkles, Timer, Award, Gift } from "lucide-react";
 import { useAuth } from "@/components/AuthWrapper";
 import { ChallengeService, type Challenge } from "@/services/challenge.service";
-import { ProfileService } from "@/services/profile.service";
 import { ChallengeForm } from "@/components/Arena/ChallengeForm";
-import { getQuestions, aiAnswerAdvanced, getScore, type Difficulty, type Subject, type QuizQuestion, type AIPersonality } from "@/lib/quiz";
+import { getQuestions, aiAnswerAdvanced, getScore, type Difficulty, type Subject, type QuizQuestion } from "@/lib/quiz";
 
 export function Arena() {
   const { session } = useAuth();
@@ -44,7 +43,6 @@ export function Arena() {
   const [quickBattleSubject, setQuickBattleSubject] = useState<Subject>("Mathematics");
   const [quickBattleDifficulty, setQuickBattleDifficulty] = useState<Difficulty>("medium");
   const [quickBattleInviteCode, setQuickBattleInviteCode] = useState("");
-  const [quickBattleId, setQuickBattleId] = useState<string | null>(null);
   const [quickBattleError, setQuickBattleError] = useState<string | null>(null);
   const [quickBattleStatus, setQuickBattleStatus] = useState<any>(null);
   const [quickBattleQuestions, setQuickBattleQuestions] = useState<QuizQuestion[]>([]);
@@ -97,7 +95,7 @@ export function Arena() {
       if (error) { console.error("Error creating quick battle:", error); setQuickBattleError("Failed to create battle. Please try again."); return; }
       if (data) {
         await ChallengeService.joinChallenge(data.id, session.user.id);
-        setQuickBattleId(data.id); setQuickBattleInviteCode(inviteCode); setQuickBattleCreated(true);
+        setQuickBattleInviteCode(inviteCode); setQuickBattleCreated(true);
         const checkInterval = setInterval(async () => {
           const { data: leaderboard } = await ChallengeService.getChallengeLeaderboard(data.id);
           if (leaderboard && leaderboard.length > 1) { clearInterval(checkInterval); setQuickBattleStatus({isReady: true, participants: leaderboard}); }
@@ -114,19 +112,19 @@ export function Arena() {
       setQuickBattleError(null);
       const { data: challenges, error } = await ChallengeService.getActiveChallenges();
       if (error) { console.error("Error finding battle:", error); setQuickBattleError("Failed to find battle. Please check your code and try again."); return; }
-      const challenge = challenges.find(c => c.challenge_type === "duel" && c.title.startsWith("Quick Battle:") && !c.is_completed);
+      const challenge = challenges?.find(c => c.challenge_type === "duel" && c.title.startsWith("Quick Battle:") && !c.is_completed);
       if (!challenge) { setQuickBattleError("Battle not found. Please check your invitation code."); return; }
       const { data: userChallenges } = await ChallengeService.getUserChallenges(session.user.id);
       const alreadyJoined = userChallenges?.some(p => p.challenge_id === challenge.id);
       
       if (!alreadyJoined) {
-        const { data: joinData, error: joinError } = await ChallengeService.joinChallenge(challenge.id, session.user.id);
-        if (joinError && !(joinError.code === '23505' && joinError.message?.includes('challenge_participations_challenge_id_user_id_key'))) {
+        const { error: joinError } = await ChallengeService.joinChallenge(challenge.id, session.user.id);
+        if (joinError && !((joinError as any).code === '23505' && (joinError as any).message?.includes('challenge_participations_challenge_id_user_id_key'))) {
           console.error("Error joining battle:", joinError); setQuickBattleError("Failed to join battle. Please try again."); return;
         }
       }
       
-      setQuickBattleId(challenge.id); setQuickBattleCreated(true); setQuickBattleStatus({isReady: true, participants: [{profiles: {username: session.user.email?.split("@")[0]}}]});
+      setQuickBattleCreated(true); setQuickBattleStatus({isReady: true, participants: [{profiles: {username: session.user.email?.split("@")[0]}}]});
       const { data: leaderboard } = await ChallengeService.getChallengeLeaderboard(challenge.id);
       if (leaderboard) setQuickBattleStatus({isReady: true, participants: leaderboard});
     } catch (err) { console.error("Exception in handleJoinQuickBattle:", err); setQuickBattleError("An unexpected error occurred. Please try again."); }
@@ -348,16 +346,16 @@ export function Arena() {
                       if (duelSelected) {
                         if (opt === duelQuestions[duelCurrent].answer) {
                           colorClasses = "bg-green-100 dark:bg-green-900/30 border-green-500 text-green-800 dark:text-green-300 shadow-green-200";
-                          if (opt === duelSelected) icon = <CheckCircle2 className="w-6 h-6 text-green-600" title="Correct!" />;
+                          if (opt === duelSelected) icon = <CheckCircle2 className="w-6 h-6 text-green-600" />;
                         } else if (opt === duelSelected && !duelCorrect) {
                           colorClasses = "bg-red-100 dark:bg-red-900/30 border-red-500 text-red-800 dark:text-red-300 shadow-red-200";
-                          icon = <XCircle className="w-6 h-6 text-red-600" title="Incorrect" />;
+                          icon = <XCircle className="w-6 h-6 text-red-600" />;
                         } else if (opt === duelSelected && duelCorrect) {
                           colorClasses = "bg-green-100 dark:bg-green-900/30 border-green-500 text-green-800 dark:text-green-300 shadow-green-200";
-                          icon = <CheckCircle2 className="w-6 h-6 text-green-600" title="Correct!" />;
+                          icon = <CheckCircle2 className="w-6 h-6 text-green-600" />;
                         } else if (opt === duelAiSelected) {
                           colorClasses = "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-500 text-yellow-800 dark:text-yellow-300 shadow-yellow-200";
-                          if (["easy", "medium"].includes(duelDifficulty)) icon = <HelpCircle className="w-6 h-6 text-yellow-500" title="AI is guessing" />;
+                          if (["easy", "medium"].includes(duelDifficulty)) icon = <HelpCircle className="w-6 h-6 text-yellow-500" />;
                         }
                       }
                       return (
@@ -488,7 +486,7 @@ export function Arena() {
                       <div className="flex justify-center"><div className="bg-white dark:bg-gray-800 px-8 py-4 rounded-xl border-2 border-red-300 dark:border-red-700 text-4xl font-black tracking-widest text-red-600 dark:text-red-400 shadow-lg">{quickBattleInviteCode}</div></div>
                     </div>
                     <div className="animate-pulse"><div className="inline-flex items-center space-x-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-full px-6 py-3"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div><span className="text-yellow-700 dark:text-yellow-300 font-bold">Waiting for opponent to join...</span></div></div>
-                    <Button variant="outline" className="mt-4" onClick={() => { setQuickBattleActive(false); setQuickBattleCreated(false); setQuickBattleId(null); setQuickBattleInviteCode(""); setQuickBattleStatus(null); }}>Cancel Battle</Button>
+                    <Button variant="outline" className="mt-4" onClick={() => { setQuickBattleActive(false); setQuickBattleCreated(false); setQuickBattleInviteCode(""); setQuickBattleStatus(null); }}>Cancel Battle</Button>
                   </div>
                 )}
               </Card>
@@ -512,7 +510,6 @@ export function Arena() {
                 <div className="space-y-3">
                   {quickBattleQuestions[quickBattleCurrent].options.map((opt, idx) => (
                     <button key={idx} className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200 ${quickBattleUserAnswers[quickBattleCurrent] === opt ? "border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300" : "border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"}`} onClick={() => {
-                      const isCorrect = opt === quickBattleQuestions[quickBattleCurrent].answer;
                       const newAnswers = [...quickBattleUserAnswers]; newAnswers[quickBattleCurrent] = opt; setQuickBattleUserAnswers(newAnswers);
                       setTimeout(() => {
                         if (quickBattleCurrent + 1 === quickBattleQuestions.length) {
@@ -534,7 +531,7 @@ export function Arena() {
               <div className="space-y-8">
                 <div className="text-4xl font-black text-transparent bg-gradient-to-r from-red-600 to-pink-500 bg-clip-text mb-4">Battle Complete!</div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">Your Score: {quickBattleScore}</div>
-                <div className="text-center"><Button onClick={() => { setQuickBattleActive(false); setQuickBattleCreated(false); setQuickBattleId(null); setQuickBattleInviteCode(""); setQuickBattleStatus(null); setQuickBattleQuestions([]); setQuickBattleUserAnswers([]); setQuickBattleScore(0); }} className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-black text-xl px-12 py-4 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"><Play className="w-6 h-6 mr-3" />Play Again</Button></div>
+                <div className="text-center"><Button onClick={() => { setQuickBattleActive(false); setQuickBattleCreated(false); setQuickBattleInviteCode(""); setQuickBattleStatus(null); setQuickBattleQuestions([]); setQuickBattleUserAnswers([]); setQuickBattleScore(0); }} className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-black text-xl px-12 py-4 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"><Play className="w-6 h-6 mr-3" />Play Again</Button></div>
               </div>
             </Card>
           </div>

@@ -11,7 +11,6 @@ import {
   Share, 
   Plus, 
   Search,
-  Filter,
   BookOpen,
   HelpCircle,
   Calendar,

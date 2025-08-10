@@ -87,8 +87,6 @@ export function Mindspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const suggestionChips = smes[selectedSMEKey].suggestions;
-
   useEffect(() => {
     const timer = setInterval(() => {
       setSessionTime(prev => prev + 1);

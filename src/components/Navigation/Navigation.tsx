@@ -68,18 +68,18 @@ export function Navigation() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const notifications = [
-    {
-      id: 1,
-      message: "New reply on your post 'How to improve my prompting skills?'",
-      timestamp: "2 minutes ago",
-    },
-    {
-      id: 2,
-      message: "@user456 mentioned you in a comment.",
-      timestamp: "1 hour ago",
-    },
-  ];
+  // const notifications = [
+  //   {
+  //     id: 1,
+  //     message: "New reply on your post 'How to improve my prompting skills?'",
+  //     timestamp: "2 minutes ago",
+  //   },
+  //   {
+  //     id: 2,
+  //     message: "@user456 mentioned you in a comment.",
+  //     timestamp: "1 hour ago",
+  //   },
+  // ];
 
   return (
     <nav

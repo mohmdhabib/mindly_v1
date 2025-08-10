@@ -1,17 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Medal } from "lucide-react";
-
-const LeaderboardItem = ({ user, rank }) => (
-  <div className="flex items-center justify-between border-b py-3">
-    <div className="flex items-center gap-4">
-      {rank === 1 && <Medal size={20} className="text-yellow-500" />}
-      {rank === 2 && <Medal size={20} className="text-gray-400" />}
-      {rank === 3 && <Medal size={20} className="text-orange-400" />}
-      <span className="font-semibold">{user.name}</span>
-    </div>
-    <span>{user.points} points</span>
-  </div>
-);
+import { LeaderboardItem } from "./components/LeaderboardItem";
 
 export const Leaderboard = () => {
   const users = [

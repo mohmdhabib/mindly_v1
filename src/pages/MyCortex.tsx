@@ -20,14 +20,14 @@ export function MyCortex() {
 
   const handleEditProfile = () => setShowProfileForms(true);
   const handleBackFromProfileForms = () => { setShowProfileForms(false); fetchProfileData(); };
-  const handleProfileUpdate = (updatedData) => { setUserProfile(prev => ({ ...prev, ...updatedData, level: prev.level, xp: prev.xp, nextLevelXP: prev.nextLevelXP, streak: prev.streak })); setShowProfileForms(false); fetchProfileData(); };
+  const handleProfileUpdate = (updatedData: any) => { setUserProfile(prev => ({ ...prev, ...updatedData, level: prev.level, xp: prev.xp, nextLevelXP: prev.nextLevelXP, streak: prev.streak })); setShowProfileForms(false); fetchProfileData(); };
 
   const fetchProfileData = async () => {
     if (loading || !session?.user?.id) { setIsLoading(false); return; }
+    const fallbackProfile = { name: session.user.email?.split("@")[0] || "User", email: session.user.email || "", level: 1, xp: 0, nextLevelXP: 1000, streak: 0, joinDate: "New User", completionRate: 0, avatar: "", bio: "", phone: "", dateOfBirth: "", location: "", preferences: {}, socialLinks: {} };
     try {
       setIsLoading(true);
       const { data, error } = await ProfileService.getOrCreateProfile(session.user.id, 5, 1500);
-      const fallbackProfile = { name: session.user.email?.split("@")[0] || "User", email: session.user.email || "", level: 1, xp: 0, nextLevelXP: 1000, streak: 0, joinDate: "New User", completionRate: 0, avatar: "", bio: "", phone: "", dateOfBirth: "", location: "", preferences: {}, socialLinks: {} };
       
       if (error) { setUserProfile(fallbackProfile); setIsLoading(false); return; }
       if (data) {
@@ -39,10 +39,15 @@ export function MyCortex() {
 
   useEffect(() => { fetchProfileData(); }, [session?.user?.id, loading]);
 
-  const getInitials = (name) => name.split(" ").map(part => part[0]).join("").toUpperCase().substring(0, 2);
+  const getInitials = (name: string) => name.split(" ").map((part: string) => part[0]).join("").toUpperCase().substring(0, 2);
 
   if (loading || isLoading) return (<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mindly-primary"></div></div>);
-  if (showProfileForms) return (<ProfileForms initialData={userProfile} onBack={handleBackFromProfileForms} onSave={handleProfileUpdate} userId={session?.user?.id} />);
+  if (showProfileForms) {
+    if (!session?.user?.id) {
+      return <div>User not authenticated</div>;
+    }
+    return (<ProfileForms initialData={userProfile} onBack={handleBackFromProfileForms} onSave={handleProfileUpdate} userId={session.user.id} />);
+  }
 
   const learningStats = { totalHours: 142, coursesCompleted: 8, currentCourses: 3, averageScore: 92, weeklyGoal: 10, weeklyProgress: 7 };
   const achievements = [{ title: "First Steps", description: "Completed your first lesson", icon: Star, earned: true, date: "2024-03-15" }, { title: "Week Warrior", description: "7-day learning streak", icon: Trophy, earned: true, date: "2024-11-20" }, { title: "Math Master", description: "Completed 5 math courses", icon: Target, earned: true, date: "2024-10-12" }, { title: "Speed Learner", description: "Completed a course in under 2 weeks", icon: Clock, earned: false, progress: 75 }, { title: "Community Helper", description: "Helped 10 fellow learners", icon: User, earned: false, progress: 40 }];
@@ -53,10 +58,12 @@ export function MyCortex() {
 
   const tabConfig = [{ id: "overview", label: "Overview", icon: BarChart3 }, { id: "progress", label: "Progress", icon: TrendingUp }, { id: "library", label: "My Library", icon: BookOpen }, { id: "achievements", label: "Achievements", icon: Trophy }, { id: "settings", label: "Settings", icon: Settings }];
 
-  const getActivityIcon = (type) => ({ lesson: BookOpen, achievement: Trophy, discussion: MessageCircle, course: Target }[type] || BookOpen);
-  const getActivityBg = (type) => ({ lesson: "bg-blue-100 dark:bg-blue-900/30", achievement: "bg-yellow-100 dark:bg-yellow-900/30", discussion: "bg-green-100 dark:bg-green-900/30", course: "bg-purple-100 dark:bg-purple-900/30" }[type] || "bg-blue-100 dark:bg-blue-900/30");
+  const activityIcons: Record<string, React.ElementType> = { lesson: BookOpen, achievement: Trophy, discussion: MessageCircle, course: Target };
+  const getActivityIcon = (type: string) => activityIcons[type] || BookOpen;
+  const activityBgs: Record<string, string> = { lesson: "bg-blue-100 dark:bg-blue-900/30", achievement: "bg-yellow-100 dark:bg-yellow-900/30", discussion: "bg-green-100 dark:bg-green-900/30", course: "bg-purple-100 dark:bg-purple-900/30" };
+  const getActivityBg = (type: string) => activityBgs[type] || "bg-blue-100 dark:bg-blue-900/30";
 
-  const StatCard = ({ icon: Icon, value, label, bgColor }) => (<Card className={`p-4 text-center ${bgColor}`}><Icon className="w-8 h-8 mx-auto mb-2" /><div className="text-2xl font-bold">{value}</div><div className="text-xs">{label}</div></Card>);
+  const StatCard = ({ icon: Icon, value, label, bgColor }: { icon: React.ElementType, value: string | number, label: string, bgColor: string }) => (<Card className={`p-4 text-center ${bgColor}`}><Icon className="w-8 h-8 mx-auto mb-2" /><div className="text-2xl font-bold">{value}</div><div className="text-xs">{label}</div></Card>);
 
   return (
     <div className="min-h-screen bg-mindly-bg dark:bg-gray-900 py-8">
@@ -81,8 +88,12 @@ export function MyCortex() {
                           src={userProfile.avatar} 
                           alt={userProfile.name}
                           onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const nextSibling = target.nextSibling as HTMLElement;
+                            if (nextSibling) {
+                              nextSibling.style.display = 'flex';
+                            }
                           }}
                         />
                       ) : null}

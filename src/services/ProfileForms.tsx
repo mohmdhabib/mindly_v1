@@ -3,18 +3,24 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, User, Mail, Calendar, Target, Bell, Shield, Save, Camera, Loader2, Upload, MapPin, Globe, Twitter, Linkedin } from "lucide-react";
+import { ArrowLeft, User, Mail, Target, Bell, Shield, Save, Camera, Loader2, Upload, MapPin, Globe, Twitter } from "lucide-react";
 import { useAuth } from "@/components/AuthWrapper";
-import { ProfileService } from "@/services/profile.service";
 import { supabase } from "@/lib/supabase";
 
-export function ProfileForms({ onBack, initialData }) {
+interface ProfileFormsProps {
+  onBack: () => void;
+  initialData: any;
+  userId: string;
+  onSave: (updatedData: any) => void;
+}
+
+export function ProfileForms({ onBack, initialData }: ProfileFormsProps) {
   const { session } = useAuth();
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [saveError, setSaveError] = useState(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [profileData, setProfileData] = useState({ 
     full_name: "", 
     username: "", 
@@ -46,83 +52,59 @@ export function ProfileForms({ onBack, initialData }) {
     show_activity: false 
   });
 
-  // Fetch profile data on mount
   useEffect(() => {
-    const fetchProfileData = async () => {
-      if (!session?.user?.id) return;
-      setIsLoading(true);
-      setSaveError(null);
-      try {
-        const { data, error } = await ProfileService.getOrCreateProfile(session.user.id);
-        if (error) { 
-          console.error("Error fetching profile:", error); 
-          setSaveError("Failed to load profile data"); 
-          return; 
-        }
-        if (data) {
-          // Set basic profile data
-          setProfileData({ 
-            full_name: data.full_name || "", 
-            username: data.username || "", 
-            email: session.user.email || "", 
-            avatar_url: data.avatar_url || "", 
-            learning_level: data.learning_level || "beginner"
-          });
-          
-          // Extract additional info from learning_preferences
-          const prefs = data.learning_preferences || {};
-          setAdditionalInfo({
-            daily_goal_hours: prefs.daily_goal_hours || 2,
-            preferred_learning_style: prefs.preferred_learning_style || "visual",
-            bio: prefs.bio || "",
-            location: prefs.location || "",
-            website: prefs.website || "",
-            twitter_handle: prefs.twitter_handle || "",
-            linkedin_handle: prefs.linkedin_handle || ""
-          });
-          
-          setNotifications({ 
-            email_notifications: prefs.email_notifications !== false, 
-            push_notifications: prefs.push_notifications !== false, 
-            sms_notifications: prefs.sms_notifications === true, 
-            marketing_notifications: prefs.marketing_notifications === true, 
-            achievement_notifications: prefs.achievement_notifications !== false, 
-            reminder_notifications: prefs.reminder_notifications !== false 
-          });
-          
-          setPrivacy({ 
-            profile_visibility: prefs.profile_visibility || "public", 
-            show_progress: prefs.show_progress !== false, 
-            show_achievements: prefs.show_achievements !== false, 
-            show_activity: prefs.show_activity === true 
-          });
-        }
-      } catch (error) { 
-        console.error("Exception fetching profile:", error); 
-        setSaveError("An error occurred while loading profile data"); 
-      } finally { 
-        setIsLoading(false); 
-      }
-    };
-    fetchProfileData();
-  }, [session?.user?.id]);
+    setIsLoading(true);
+    if (initialData) {
+      setProfileData({
+        full_name: initialData.name || "",
+        username: initialData.username || "",
+        email: initialData.email || "",
+        avatar_url: initialData.avatar || "",
+        learning_level: initialData.preferences?.learning_level || "beginner",
+      });
+      setAdditionalInfo({
+        daily_goal_hours: initialData.preferences?.daily_goal_hours || 2,
+        preferred_learning_style: initialData.preferences?.preferred_learning_style || "visual",
+        bio: initialData.bio || "",
+        location: initialData.location || "",
+        website: initialData.socialLinks?.website || "",
+        twitter_handle: initialData.socialLinks?.twitter || "",
+        linkedin_handle: initialData.socialLinks?.linkedin || "",
+      });
+      setNotifications({
+        email_notifications: initialData.preferences?.notification_settings?.email_notifications !== false,
+        push_notifications: initialData.preferences?.notification_settings?.push_notifications !== false,
+        sms_notifications: initialData.preferences?.notification_settings?.sms_notifications === true,
+        marketing_notifications: initialData.preferences?.notification_settings?.marketing_notifications === true,
+        achievement_notifications: initialData.preferences?.notification_settings?.achievement_notifications !== false,
+        reminder_notifications: initialData.preferences?.notification_settings?.reminder_notifications !== false,
+      });
+      setPrivacy({
+        profile_visibility: initialData.preferences?.privacy_settings?.profile_visibility || "public",
+        show_progress: initialData.preferences?.privacy_settings?.show_progress !== false,
+        show_achievements: initialData.preferences?.privacy_settings?.show_achievements !== false,
+        show_activity: initialData.preferences?.privacy_settings?.show_activity === true,
+      });
+    }
+    setIsLoading(false);
+  }, [initialData]);
 
   // Handle form input changes
-  const handleInputChange = (field, value) => { 
+  const handleInputChange = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value })); 
     setSaveError(null); 
   };
   
-  const handleAdditionalInfoChange = (field, value) => { 
+  const handleAdditionalInfoChange = (field: string, value: string | number) => {
     setAdditionalInfo(prev => ({ ...prev, [field]: value })); 
     setSaveError(null); 
   };
   
-  const handleNotificationChange = (key, value) => setNotifications(prev => ({ ...prev, [key]: value }));
-  const handlePrivacyChange = (key, value) => setPrivacy(prev => ({ ...prev, [key]: value }));
+  const handleNotificationChange = (key: string, value: boolean) => setNotifications(prev => ({ ...prev, [key]: value }));
+  const handlePrivacyChange = (key: string, value: boolean | string) => setPrivacy(prev => ({ ...prev, [key]: value }));
 
   // Handle image upload
-  const handleImageUpload = async (event) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !session?.user?.id) return;
 
@@ -144,7 +126,7 @@ export function ProfileForms({ onBack, initialData }) {
       const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      const { data: uploadData, error: uploadError } = await supabase
+      const { error: uploadError } = await supabase
         .storage
         .from("habibi")
         .upload(filePath, file, {
@@ -230,7 +212,7 @@ export function ProfileForms({ onBack, initialData }) {
     }
   };
 
-  const getInitials = (name) => name ? name.split(" ").map(part => part[0]).join("").toUpperCase().substring(0, 2) : "U";
+  const getInitials = (name: string) => name ? name.split(" ").map((part: string) => part[0]).join("").toUpperCase().substring(0, 2) : "U";
 
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
@@ -304,7 +286,7 @@ export function ProfileForms({ onBack, initialData }) {
                 <Button 
                   size="sm" 
                   className="absolute -bottom-2 -right-2 rounded-full w-12 h-12 p-0 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg group-hover:scale-110 transition-all duration-200" 
-                  onClick={() => fileInputRef.current?.click()} 
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
                   disabled={isUploadingImage}
                 >
                   {isUploadingImage ? 
@@ -320,7 +302,7 @@ export function ProfileForms({ onBack, initialData }) {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => fileInputRef.current?.click()} 
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
                   disabled={isUploadingImage}
                   className="bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm border-purple-200 hover:border-purple-300 hover:bg-purple-50 dark:hover:bg-gray-600"
                 >
@@ -507,7 +489,7 @@ export function ProfileForms({ onBack, initialData }) {
                     </p>
                   </div>
                   <Switch 
-                    checked={value} 
+                    checked={!!value}
                     onCheckedChange={(checked) => handleNotificationChange(key, checked)} 
                     className="ml-4"
                   />
@@ -549,7 +531,7 @@ export function ProfileForms({ onBack, initialData }) {
                       </p>
                     </div>
                     <Switch 
-                      checked={value} 
+                      checked={!!value}
                       onCheckedChange={(checked) => handlePrivacyChange(key, checked)} 
                       className="ml-4"
                     />

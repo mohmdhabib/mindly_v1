@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
 
 interface Document {
   id: string;
@@ -34,12 +33,11 @@ export function DocumentList({ onSelectDocument }: DocumentListProps) {
     fetchDocuments();
   }, []);
 
-  const handleSelectDocument = (documentId: string) => {
-    const doc = documents.find(d => d.id === documentId);
-    if (doc) {
-      onSelectDocument(doc);
+  useEffect(() => {
+    if (selectedDoc) {
+      onSelectDocument(selectedDoc);
     }
-  };
+  }, [selectedDoc, onSelectDocument]);
 
   return (
     <div>

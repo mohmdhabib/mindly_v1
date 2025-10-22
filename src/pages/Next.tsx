@@ -50,6 +50,8 @@ const NextPage: React.FC = () => {
         minScale={0.1}
         maxScale={2}
         centerOnInit={true}
+        limitToBounds={true}
+        doubleClick={{ disabled: true }}
       >
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
@@ -59,7 +61,7 @@ const NextPage: React.FC = () => {
               <button onClick={() => resetTransform()}>Reset</button>
             </div>
             <TransformComponent wrapperClass="canvas-wrapper" contentClass="notes-container">
-              <div className="infinite-canvas">
+              <div className="canvas-boundary">
                 {notes.map((note) => (
                   <StickyNote
                     key={note.id}

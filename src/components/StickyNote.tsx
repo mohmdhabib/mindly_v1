@@ -44,7 +44,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({
     <Draggable
       position={position}
       onStop={handleDrag}
-      bounds="parent"
+      bounds=".canvas-boundary"
       grid={[10, 10]} // Snap to grid for better organization
     >
       <div className="notion-card" style={{ backgroundColor: color }}>

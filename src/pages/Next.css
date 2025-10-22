@@ -28,11 +28,12 @@ body.dark {
   height: 100%;
 }
 
-.infinite-canvas {
-  width: 5000px;
-  height: 5000px;
+.canvas-boundary {
+  width: 2000px;
+  height: 1500px;
   position: relative;
-  transform-origin: center center;
+  border: 2px solid #ccc;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
   background-size: 50px 50px;
   background-image: 
     linear-gradient(to right, rgba(128, 128, 128, 0.1) 1px, transparent 1px),

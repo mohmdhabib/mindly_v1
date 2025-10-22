@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthWrapper } from './components/AuthWrapper';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import NextPage from '@/pages/Next';
 
 // Pages
 import { Home } from '@/pages/Home';
@@ -35,6 +36,7 @@ function App() {
                   <Route path="/community" element={<Community />} />
                   <Route path="/pathways" element={<Pathways />} />
                   <Route path="/my-cortex" element={<MyCortex />} />
+                  <Route path="/next" element={<NextPage />} />
                 </Route>
               </Routes>
             </main>

@@ -40,6 +40,7 @@ export function Navigation() {
   const navItems = [
     { name: "Launchpad", icon: Rocket, emoji: "🚀", path: "/launchpad" },
     { name: "Mindspace", icon: Brain, emoji: "🧠", path: "/mindspace" },
+    { name: "NEXT", icon: Users, path: "/Next" },
     { name: "ARENA", icon: Users, path: "/arena" },
     { name: "Community", icon: Users, path: "/community" },
     { name: "Pathways", icon: Search, emoji: "🔍", path: "/pathways" },

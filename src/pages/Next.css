@@ -23,47 +23,29 @@ body.dark {
   overflow: hidden;
 }
 
-
 .canvas-wrapper {
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   overflow: hidden;
-  background-color: #F5F5F5;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .notes-container {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  width: 100%;
+  height: 100%;
 }
 
 .infinite-canvas {
+  width: 10000px;
+  height: 10000px;
   position: relative;
-  background-color: #FFFFFF;
-  background-image: 
-    /* Minor grid */
-    linear-gradient(90deg, rgba(50, 50, 50, 0.05) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(50, 50, 50, 0.05) 1px, transparent 1px),
-    /* Major grid */
-    linear-gradient(90deg, rgba(50, 50, 50, 0.15) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(50, 50, 50, 0.15) 1px, transparent 1px);
-  background-size: 
-    20px 20px,
-    20px 20px,
-    100px 100px,
-    100px 100px;
-  background-position: center center;
   transform-origin: center center;
-  border: 2px solid #1a73e8;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-  margin: 0 auto;
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(128, 128, 128, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(128, 128, 128, 0.1) 1px, transparent 1px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .canvas-content {
@@ -72,26 +54,6 @@ body.dark {
   height: 100%;
   left: 0;
   top: 0;
-  pointer-events: none;
-}
-
-.canvas-content > * {
-  pointer-events: auto !important;
-  touch-action: none;
-}
-
-/* Canvas center marker */
-.infinite-canvas::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 20px;
-  height: 20px;
-  background-color: rgba(0, 120, 255, 0.2);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
 }
 
 .add-note-button {
@@ -120,70 +82,29 @@ body.dark {
 .zoom-controls {
   position: fixed;
   bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 20px;
   display: flex;
-  gap: 4px;
+  gap: 10px;
   z-index: 1000;
-  background-color: white;
-  padding: 4px;
-  border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.zoom-btn {
-  width: 32px;
-  height: 32px;
+.zoom-controls button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border: none;
-  background-color: transparent;
-  color: #333;
+  background-color: white;
+  color: #007bff;
   font-size: 18px;
   cursor: pointer;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
   transition: all 0.2s;
 }
 
-.zoom-btn:hover {
-  background-color: #f0f0f0;
-}
-
-.zoom-level {
-  min-width: 60px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s;
-  user-select: none;
-}
-
-.zoom-level:hover {
-  background-color: #f0f0f0;
-}
-
-.zoom-fit-btn {
-  height: 32px;
-  padding: 0 12px;
-  border: none;
-  background-color: transparent;
-  color: #333;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.zoom-fit-btn:hover {
-  background-color: #f0f0f0;
+.zoom-controls button:hover {
+  background-color: #007bff;
+  color: white;
 }

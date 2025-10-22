@@ -1,71 +1,60 @@
-.sticky-note {
-  background-color: #fff;
-  width: 200px;
-  height: 200px;
-  padding: 10px;
-  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-}
-
-.sticky-note-textarea {
-  width: 100%;
-  height: 100%;
-  border: none;
-  resize: none;
-  background-color: transparent;
-  outline: none;
-  font-family: Arial, sans-serif;
-  font-size: 14px;
-}
-
 .notion-card {
   width: 250px;
   min-height: 200px;
-  padding: 10px;
+  padding: 12px;
   border-radius: 8px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   position: absolute;
   font-family: Arial, sans-serif;
+  background-color: #fff;
+  cursor: move;
+  user-select: none;
+  transform-origin: center center;
+}
+
+.notion-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .notion-card-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 8px;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: move;
+}
+
+.notion-card-header:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .delete-button,
-.media-button {
+.color-button {
+  width: 24px;
+  height: 24px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
-  padding: 4px;
+  font-size: 16px;
+  padding: 0;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
 .delete-button:hover {
-  background-color: #ffdddd;
+  background-color: rgba(255, 0, 0, 0.1);
+  color: #ff4444;
 }
 
-.media-button:hover {
-  background-color: #e6f7ff;
-}
-
-.media-preview {
-  margin-bottom: 8px;
-}
-
-.media-element {
-  max-width: 100%;
-  max-height: 150px;
-  border-radius: 4px;
+.color-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .notion-card-textarea {
@@ -75,4 +64,14 @@
   background: transparent;
   outline: none;
   font-size: 14px;
+  line-height: 1.5;
+  min-height: 150px;
+  padding: 8px;
+  cursor: text;
+  font-family: Arial, sans-serif;
+}
+
+.drag-handle {
+  cursor: move;
+  user-select: none;
 }

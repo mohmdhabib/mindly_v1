@@ -1,10 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import StickyNote from '@/components/StickyNote';
 import './Next.css';
 
 const NextPage: React.FC = () => {
   const [notes, setNotes] = useState<{ id: number; content: string; color: string; position: { x: number; y: number } }[]>([]);
+  const [minScale, setMinScale] = useState(0.1);
+  const transformWrapperRef = useRef(null);
+  const canvasBoundaryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const calculateMinScale = () => {
+      if (canvasBoundaryRef.current) {
+        const { clientWidth, clientHeight } = document.documentElement;
+        const { offsetWidth, offsetHeight } = canvasBoundaryRef.current;
+        const scaleX = clientWidth / offsetWidth;
+        const scaleY = clientHeight / offsetHeight;
+        setMinScale(Math.max(scaleX, scaleY));
+      }
+    };
+
+    calculateMinScale();
+    window.addEventListener('resize', calculateMinScale);
+    return () => window.removeEventListener('resize', calculateMinScale);
+  }, []);
 
   const addNote = () => {
     const colors = ['#FFFF99', '#FF9999', '#99FF99', '#99FFFF', '#FF99FF'];
@@ -46,8 +65,9 @@ const NextPage: React.FC = () => {
   return (
     <div className="next-page">
       <TransformWrapper
+        ref={transformWrapperRef}
         initialScale={1}
-        minScale={0.1}
+        minScale={minScale}
         maxScale={2}
         centerOnInit={true}
         limitToBounds={true}
@@ -61,7 +81,7 @@ const NextPage: React.FC = () => {
               <button onClick={() => resetTransform()}>Reset</button>
             </div>
             <TransformComponent wrapperClass="canvas-wrapper" contentClass="notes-container">
-              <div className="canvas-boundary">
+              <div className="canvas-boundary" ref={canvasBoundaryRef}>
                 {notes.map((note) => (
                   <StickyNote
                     key={note.id}
